@@ -147,7 +147,8 @@ def write_text(
 ) -> ApplicationDraft:
     written, model, length_flags = _write(session, ctx, kind, tone, instructions)
     greeting = written.greeting.strip()
-    body = f"{greeting}\n\n{written.body.strip()}" if greeting else written.body.strip()
+    text = guardrails.strip_fact_ids(written.body.strip())
+    body = f"{greeting}\n\n{text}" if greeting else text
     report = check(body, ctx)
     report.flags = length_flags + report.flags
     content: dict[str, Any] = {
@@ -192,7 +193,7 @@ def write_tweaks(session: Session, ctx: Context, tone: Tone) -> ApplicationDraft
             {
                 "bullet_id": t.bullet_id,
                 "original": original,
-                "suggested": t.suggested.strip(),
+                "suggested": guardrails.strip_fact_ids(t.suggested.strip()),
                 "rationale": t.rationale.strip(),
                 "emphasized_skills": t.emphasized_skills,
             }

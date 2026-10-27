@@ -30,6 +30,14 @@ _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 _PARAGRAPH = re.compile(r"\n\s*\n")
 # Counts "don't" as one word, with a straight or a curly apostrophe (chr keeps this ASCII).
 _WORD = re.compile(r"\b[\w'" + chr(0x2019) + r"-]+\b")
+# Fact-sheet ids a model may copy into the text: " (b1)", "[role2]", "(b1, b3)".
+_FACT_ID = re.compile(
+    r"\s?[(\[]\s*(?:b|role|project|edu|cert)\d+(?:\s*,\s*(?:b|role|project|edu|cert)\d+)*\s*[)\]]"
+)
+
+
+def strip_fact_ids(text: str) -> str:
+    return _FACT_ID.sub("", text)
 
 
 @dataclass

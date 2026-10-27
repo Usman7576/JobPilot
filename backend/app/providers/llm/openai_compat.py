@@ -23,6 +23,22 @@ class _Transient(Exception):
     pass
 
 
+def strict_schema(schema: dict[str, Any]) -> dict[str, Any]:
+    """The schema in strict-mode form: every object closed, every property required.
+
+    Optional fields become required; the prompts already say to use "" or [] when unknown,
+    and our Pydantic models accept those.
+    """
+    out = dict(schema)
+    if out.get("type") == "object" and "properties" in out:
+        out["properties"] = {k: strict_schema(v) for k, v in out["properties"].items()}
+        out["required"] = list(out["properties"])
+        out["additionalProperties"] = False
+    if isinstance(out.get("items"), dict):
+        out["items"] = strict_schema(out["items"])
+    return out
+
+
 class OpenAICompatibleProvider:
     def __init__(
         self,
@@ -33,6 +49,7 @@ class OpenAICompatibleProvider:
         smart_model: str,
         fast_model: str,
         require_key: bool = True,
+        strict: bool = False,
     ) -> None:
         if require_key and not api_key:
             raise LLMNotConfigured(f"No API key configured for {name}")
@@ -40,6 +57,8 @@ class OpenAICompatibleProvider:
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
         self._models: dict[ModelTier, str] = {"smart": smart_model, "fast": fast_model}
+        # Strict mode makes the server constrain output to the schema (Groq's GPT-OSS models).
+        self._strict = strict
 
     def generate_json(
         self,
@@ -65,7 +84,11 @@ class OpenAICompatibleProvider:
             "max_tokens": prompt.spec.max_tokens,
             "response_format": {
                 "type": "json_schema",
-                "json_schema": {"name": prompt.spec.id, "schema": schema, "strict": False},
+                "json_schema": {
+                    "name": prompt.spec.id,
+                    "schema": strict_schema(schema) if self._strict else schema,
+                    "strict": self._strict,
+                },
             },
         }
         payload = self._post(body)
@@ -112,7 +135,18 @@ class OpenAICompatibleProvider:
             raise LLMRateLimited(f"{self.name} rate limit reached")
         if resp.status_code in (401, 403):
             raise LLMNotConfigured(f"{self.name} rejected the API key")
+        if resp.status_code == 400 and _error_code(resp) == "json_validate_failed":
+            # The model's answer didn't fit the schema: the gateway retries once with a hint.
+            raise LLMInvalidOutput("the answer didn't match the required JSON format")
         if resp.status_code != 200:
             raise LLMError(f"{self.name} request failed ({resp.status_code})")
         result: dict[str, Any] = resp.json()
         return result
+
+
+def _error_code(resp: httpx.Response) -> str | None:
+    try:
+        code = (resp.json().get("error") or {}).get("code")
+    except ValueError:
+        return None
+    return str(code) if code else None

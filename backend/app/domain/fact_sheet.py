@@ -49,7 +49,7 @@ def normalize_number(raw: str) -> str:
     text = raw.strip().lower()
     for word, short in _SCALE_WORDS.items():
         text = text.replace(word, short)
-    text = text.replace(" ", "")
+    text = re.sub(r"\s+", "", text)  # any space, incl. no-break spaces models like to emit
     text = re.sub(r"[$£€₹,]", "", text)
     match = re.match(r"(\d+(?:\.\d+)?)(.*)", text)
     if not match:

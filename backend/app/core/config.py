@@ -67,8 +67,9 @@ class Settings(BaseSettings):
     gemini_fast_model: str = "gemini-flash-lite-latest"
     groq_api_key: str = ""
     groq_base_url: str = "https://api.groq.com/openai/v1"
-    groq_model: str = "llama-3.3-70b-versatile"
-    groq_fast_model: str = "llama-3.1-8b-instant"
+    # Groq's free tier allows ~8k tokens/minute per model; Llama 3.x models were retired.
+    groq_model: str = "openai/gpt-oss-120b"
+    groq_fast_model: str = "openai/gpt-oss-20b"
     ollama_base_url: str = "http://host.docker.internal:11434/v1"
     ollama_model: str = "qwen2.5:7b"
     # Free tiers are limited by requests, not dollars. 0 disables the limit.

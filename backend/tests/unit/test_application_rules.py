@@ -153,3 +153,57 @@ def test_claude_overloaded_is_unavailable() -> None:
 )
 def test_degree_mentions(text: str, families: set[str]) -> None:
     assert fact_sheet.degrees_in(text) == families
+
+
+def test_strip_fact_ids_keeps_normal_brackets() -> None:
+    text = "Served 2M requests (b1) on AWS [b3]; Python (5 years)."
+    assert guardrails.strip_fact_ids(text) == "Served 2M requests on AWS; Python (5 years)."
+
+
+def test_strict_schema_closes_every_object() -> None:
+    from app.providers.llm.openai_compat import strict_schema
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "a": {"type": "string"},
+            "items": {
+                "type": "array",
+                "items": {"type": "object", "properties": {"x": {"type": "integer"}}},
+            },
+        },
+        "required": ["a"],
+    }
+    out = strict_schema(schema)
+    assert out["required"] == ["a", "items"] and out["additionalProperties"] is False
+    inner = out["properties"]["items"]["items"]
+    assert inner["required"] == ["x"] and inner["additionalProperties"] is False
+    assert schema["required"] == ["a"]  # the original is untouched
+
+
+@respx.mock
+def test_groq_format_failure_is_retryable() -> None:
+    from app.providers.llm import LLMInvalidOutput
+    from app.providers.llm.openai_compat import OpenAICompatibleProvider
+
+    route = respx.post("https://api.groq.com/openai/v1/chat/completions").mock(
+        return_value=httpx.Response(400, json={"error": {"code": "json_validate_failed"}})
+    )
+    provider = OpenAICompatibleProvider(
+        name="groq",
+        base_url="https://api.groq.com/openai/v1",
+        api_key="k",
+        smart_model="openai/gpt-oss-120b",
+        fast_model="openai/gpt-oss-20b",
+        strict=True,
+    )
+    with pytest.raises(LLMInvalidOutput):
+        provider.generate_json(_prompt(), schema={"type": "object", "properties": {}}, tier="smart")
+    sent = route.calls[0].request.content
+    assert b'"strict":true' in sent.replace(b" ", b"")
+
+
+def test_numbers_with_unusual_spaces() -> None:
+    narrow_nbsp, nbsp = chr(0x202F), chr(0xA0)
+    text = f"2{narrow_nbsp}million requests and 40{nbsp}percent faster"
+    assert fact_sheet.numbers_in(text) == {"2m", "40%"}

@@ -59,6 +59,7 @@ def _build(name: str) -> LLMProvider:
                 api_key=s.groq_api_key,
                 smart_model=s.groq_model,
                 fast_model=s.groq_fast_model,
+                strict=True,
             )
         return OpenAICompatibleProvider(
             name="ollama",
