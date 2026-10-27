@@ -1,0 +1,103 @@
+name: jobpilot
+
+x-backend: &backend
+  image: jobpilot-backend:dev
+  build:
+    context: ./backend
+  env_file:
+    - path: .env
+      required: true
+  volumes:
+    - ./backend:/app
+    - uploads:/data/uploads
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jobpilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jobpilot}
+      POSTGRES_DB: ${POSTGRES_DB:-jobpilot}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jobpilot}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    <<: *backend
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+             --proxy-headers --forwarded-allow-ips '*'"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/live')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    <<: *backend
+    command: celery -A app.tasks.celery_app worker -Q default,scrape,llm,email,sync -l info --concurrency 4
+
+  beat:
+    <<: *backend
+    command: celery -A app.tasks.celery_app beat -l info --schedule /tmp/celerybeat-schedule
+
+  # Optional. For development run the frontend on the host (`cd frontend && npm run dev`):
+  # Next.js file watching is unreliable through Docker bind mounts on Windows/macOS.
+  # `docker compose --profile web up -d` runs it in Docker anyway.
+  web:
+    profiles: ["web"]
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      API_INTERNAL_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - api
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  flower:
+    <<: *backend
+    profiles: ["tools"]
+    command: celery -A app.tasks.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
+
+volumes:
+  pgdata:
+  uploads:
