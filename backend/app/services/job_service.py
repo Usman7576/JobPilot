@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFound
 from app.models import Job, JobSourceRecord, User, UserJob
-from app.models.enums import RemoteType
+from app.models.enums import EmploymentType, PayStatus, RemoteType, SearchKind
 from app.providers.sources import all_sources
 from app.schemas.job import JobCard, JobDetail, JobPage, JobSort, JobSourceLink
 
@@ -40,6 +40,7 @@ def _card(job: Job, user_job: UserJob, sources: list[str]) -> JobCard:
         salary_max=job.salary_max,
         salary_currency=job.salary_currency,
         salary_period=job.salary_period,
+        pay_status=job.pay_status,
         required_skills=job.required_skills,
         snippet=_snippet(job.description_text),
         posted_at=job.posted_at,
@@ -57,6 +58,8 @@ async def list_jobs(
     user: User,
     *,
     q: str | None,
+    kind: SearchKind | None,
+    pay: PayStatus | None,
     source: str | None,
     remote_type: RemoteType | None,
     posted_within_days: int | None,
@@ -75,6 +78,12 @@ async def list_jobs(
     if q:
         like = f"%{q.strip()}%"
         stmt = stmt.where(or_(Job.title.ilike(like), Job.company_name.ilike(like)))
+    if kind == SearchKind.INTERNSHIPS:
+        stmt = stmt.where(Job.employment_type == EmploymentType.INTERNSHIP)
+    elif kind == SearchKind.JOBS:
+        stmt = stmt.where(Job.employment_type != EmploymentType.INTERNSHIP)
+    if pay:
+        stmt = stmt.where(Job.pay_status == pay)
     if source:
         stmt = stmt.where(
             exists().where(and_(JobSourceRecord.job_id == Job.id, JobSourceRecord.source == source))

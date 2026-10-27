@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { EmptyState } from "@/components/common/empty-state";
+import { PayBadge } from "@/components/jobs/job-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +69,7 @@ export function JobDetailView() {
           </span>
         </div>
         <div className="flex flex-wrap gap-1.5">
+          <PayBadge job={j} />
           {remote && <Badge>{remote}</Badge>}
           {j.employment_type !== "unknown" && (
             <Badge variant="secondary">{j.employment_type.replace("_", " ")}</Badge>

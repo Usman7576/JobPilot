@@ -5,8 +5,25 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { JobCard as Job } from "@/lib/api/generated/model";
+import type { JobCard as Job, PayStatus } from "@/lib/api/generated/model";
 import { formatSalary, REMOTE_LABEL, timeAgo } from "@/lib/format";
+
+const PAY: Record<PayStatus, { label: string; className: string }> = {
+  paid: { label: "Paid", className: "bg-emerald-600 text-white hover:bg-emerald-600" },
+  unpaid: { label: "Unpaid", className: "bg-amber-500 text-white hover:bg-amber-500" },
+  unknown: { label: "Pay not stated", className: "" },
+};
+
+/** Paid / unpaid label; shown on internships, where it's the question people ask first. */
+export function PayBadge({ job }: { job: Pick<Job, "employment_type" | "pay_status"> }) {
+  if (job.employment_type !== "internship") return null;
+  const pay = PAY[job.pay_status];
+  return (
+    <Badge variant={job.pay_status === "unknown" ? "outline" : "default"} className={pay.className}>
+      {pay.label}
+    </Badge>
+  );
+}
 
 export function JobCard({ job, onDismiss }: { job: Job; onDismiss: () => void }) {
   const salary = formatSalary(job);
@@ -44,6 +61,7 @@ export function JobCard({ job, onDismiss }: { job: Job; onDismiss: () => void })
       </div>
       {job.snippet && <p className="text-muted-foreground line-clamp-2 text-sm">{job.snippet}</p>}
       <div className="flex flex-wrap items-center gap-1.5">
+        <PayBadge job={job} />
         {remote && <Badge>{remote}</Badge>}
         {job.seniority && (
           <Badge variant="secondary" className="capitalize">

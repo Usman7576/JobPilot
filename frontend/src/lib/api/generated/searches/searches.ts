@@ -26,11 +26,12 @@ import type {
 import type {
   HTTPValidationError,
   SearchRunOut,
+  SearchStartIn,
   SearchesListSearchesParams
 } from '../model';
 
 import { customFetch } from '../../fetcher';
-import type { ErrorType } from '../../fetcher';
+import type { ErrorType , BodyType } from '../../fetcher';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -61,17 +62,31 @@ export const getSearchesStartSearchUrl = () => {
 }
 
 /**
- * Start a search with the saved preferences. 409 if one is already running.
+ * Start a job or internship search with the saved preferences. 409 if one is running.
  * @summary Start Search
  */
-export const searchesStartSearch = async ( options?: Parameters<typeof customFetch>[1]): Promise<SearchRunOut> => {
+export const searchesStartSearch = async (searchStartInNull?: SearchStartIn | null, options?: Parameters<typeof customFetch>[1]): Promise<SearchRunOut> => {
 
-  return customFetch<SearchRunOut>(getSearchesStartSearchUrl(),
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<SearchRunOut>(getSearchesStartSearchUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(searchStartInNull)
   }
 );}
 
@@ -81,9 +96,9 @@ export const searchesStartSearch = async ( options?: Parameters<typeof customFet
 
 export const getSearchesStartSearchMutationKey = () => ['searchesStartSearch'] as const;
 
-export const getSearchesStartSearchMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof searchesStartSearch>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof searchesStartSearch>>, TError,void, TContext> => {
+export const getSearchesStartSearchMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof searchesStartSearch>>, TError,SearchesStartSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof searchesStartSearch>>, TError,SearchesStartSearchMutationVariables, TContext> => {
 
 const mutationKey = getSearchesStartSearchMutationKey();
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -95,10 +110,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof searchesStartSearch>>, void> = () => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof searchesStartSearch>>, SearchesStartSearchMutationVariables> = (props) => {
+          const {data} = props ?? {};
 
-
-          return  searchesStartSearch(requestOptions)
+          return  searchesStartSearch(data,requestOptions)
         }
 
 
@@ -109,19 +124,19 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SearchesStartSearchMutationResult = NonNullable<Awaited<ReturnType<typeof searchesStartSearch>>>
-
-    export type SearchesStartSearchMutationError = ErrorType<unknown>
-
+    export type SearchesStartSearchMutationBody = BodyType<SearchStartIn | null> | undefined
+    export type SearchesStartSearchMutationError = ErrorType<HTTPValidationError>
+    export type SearchesStartSearchMutationVariables = {data?: BodyType<SearchStartIn | null>}
 
     /**
  * @summary Start Search
  */
-export const useSearchesStartSearch = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof searchesStartSearch>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useSearchesStartSearch = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof searchesStartSearch>>, TError,SearchesStartSearchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof searchesStartSearch>>,
         TError,
-        void,
+        SearchesStartSearchMutationVariables,
         TContext
       > => {
       return useMutation(getSearchesStartSearchMutationOptions(options), queryClient);

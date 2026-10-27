@@ -1009,8 +1009,25 @@
           "searches"
         ],
         "summary": "Start Search",
-        "description": "Start a search with the saved preferences. 409 if one is already running.",
+        "description": "Start a job or internship search with the saved preferences. 409 if one is running.",
         "operationId": "searches_start_search",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SearchStartIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "202": {
             "description": "Successful Response",
@@ -1018,6 +1035,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SearchRunOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1210,6 +1237,38 @@
                 }
               ],
               "title": "Q"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/SearchKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "pay",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PayStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Pay"
             }
           },
           {
@@ -1806,6 +1865,9 @@
               }
             ]
           },
+          "pay_status": {
+            "$ref": "#/components/schemas/PayStatus"
+          },
           "required_skills": {
             "items": {
               "type": "string"
@@ -1887,6 +1949,7 @@
           "salary_max",
           "salary_currency",
           "salary_period",
+          "pay_status",
           "required_skills",
           "snippet",
           "posted_at",
@@ -1995,6 +2058,9 @@
               }
             ]
           },
+          "pay_status": {
+            "$ref": "#/components/schemas/PayStatus"
+          },
           "required_skills": {
             "items": {
               "type": "string"
@@ -2101,6 +2167,7 @@
           "salary_max",
           "salary_currency",
           "salary_period",
+          "pay_status",
           "required_skills",
           "snippet",
           "posted_at",
@@ -2232,6 +2299,16 @@
           "done"
         ],
         "title": "OnboardingStep"
+      },
+      "PayStatus": {
+        "type": "string",
+        "enum": [
+          "paid",
+          "unpaid",
+          "unknown"
+        ],
+        "title": "PayStatus",
+        "description": "Whether a posting (mostly relevant for internships) pays, from salary or wording."
       },
       "PreferencesIn": {
         "properties": {
@@ -3047,12 +3124,23 @@
         ],
         "title": "SalaryPeriod"
       },
+      "SearchKind": {
+        "type": "string",
+        "enum": [
+          "jobs",
+          "internships"
+        ],
+        "title": "SearchKind"
+      },
       "SearchRunOut": {
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid",
             "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SearchKind"
           },
           "trigger": {
             "$ref": "#/components/schemas/SearchTrigger"
@@ -3138,6 +3226,7 @@
         "type": "object",
         "required": [
           "id",
+          "kind",
           "trigger",
           "status",
           "progress",
@@ -3215,6 +3304,17 @@
           "duration_ms"
         ],
         "title": "SearchRunSourceOut"
+      },
+      "SearchStartIn": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/SearchKind",
+            "default": "jobs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SearchStartIn"
       },
       "SearchStatus": {
         "type": "string",

@@ -5,7 +5,7 @@ import uuid
 from fastapi import APIRouter, Query, status
 
 from app.core.deps import CurrentUser, DbSession
-from app.models.enums import RemoteType
+from app.models.enums import PayStatus, RemoteType, SearchKind
 from app.schemas.job import JobDetail, JobPage, JobSort
 from app.services import job_service
 
@@ -17,6 +17,8 @@ async def list_jobs(
     user: CurrentUser,
     db: DbSession,
     q: str | None = Query(default=None, max_length=100),
+    kind: SearchKind | None = None,
+    pay: PayStatus | None = None,
     source: str | None = Query(default=None, max_length=40),
     remote_type: RemoteType | None = None,
     posted_within_days: int | None = Query(default=None, ge=1, le=90),
@@ -29,6 +31,8 @@ async def list_jobs(
         db,
         user,
         q=q,
+        kind=kind,
+        pay=pay,
         source=source,
         remote_type=remote_type,
         posted_within_days=posted_within_days,

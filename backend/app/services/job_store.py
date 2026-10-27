@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.domain.normalize import NormalizedJob
 from app.models import Company, Job, JobSourceRecord, UserJob
-from app.models.enums import NormalizationStatus
+from app.models.enums import NormalizationStatus, PayStatus
 
 
 @dataclass(frozen=True)
@@ -103,6 +103,7 @@ def _insert(session: Session, job: NormalizedJob, now: datetime) -> Job:
         salary_max=job.salary_max,
         salary_currency=job.salary_currency,
         salary_period=job.salary_period,
+        pay_status=job.pay_status,
         required_skills=job.required_skills,
         nice_to_have_skills=[],
         description_text=job.description_text,
@@ -136,3 +137,5 @@ def _merge(existing: Job, job: NormalizedJob, now: datetime) -> None:
         existing.salary_currency, existing.salary_period = job.salary_currency, job.salary_period
     if existing.posted_at is None:
         existing.posted_at = job.posted_at
+    if existing.pay_status == PayStatus.UNKNOWN:
+        existing.pay_status = job.pay_status

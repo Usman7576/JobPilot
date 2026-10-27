@@ -130,7 +130,7 @@ function PreferencesStep() {
         submitLabel="Save and find jobs"
         onSaved={() =>
           // Start the first search, then show it running on the jobs page.
-          start.mutate(undefined, { onSettled: () => router.push("/jobs") })
+          start.mutate({ data: { kind: "jobs" } }, { onSettled: () => router.push("/jobs") })
         }
       />
     </div>

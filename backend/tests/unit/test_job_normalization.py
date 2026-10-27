@@ -94,6 +94,9 @@ def test_clean_description_strips_markup_and_scripts() -> None:
     assert "We use Python daily." in text and "- AWS" in text
     assert clean_description("**Bold** and [link](http://x)", False) == "Bold and link"
     assert clean_description(None, True) is None
+    # Some feeds escape their HTML twice.
+    double = "&lt;p&gt;Join us.&lt;/p&gt;&lt;p&gt;&amp;nbsp;&lt;/p&gt;&lt;p&gt;Python &amp;amp; Go&lt;/p&gt;"
+    assert clean_description(double, True) == "Join us.\n\nPython & Go"
 
 
 def test_normalize_end_to_end() -> None:

@@ -44,6 +44,7 @@ class AdzunaSource:
             "app_id": s.adzuna_app_id,
             "app_key": s.adzuna_app_key,
             "what": query.search_term + (" remote" if query.remote_only else ""),
+            **({"what_or": "intern internship trainee"} if query.internship else {}),
             "results_per_page": min(query.results_wanted, 50),
             "max_days_old": query.posted_within_days,
             "sort_by": "date",
@@ -92,7 +93,9 @@ class JoobleSource:
 
     def fetch(self, query: SourceQuery) -> list[RawJob]:
         body: dict[str, Any] = {
-            "keywords": query.search_term + (" remote" if query.remote_only else ""),
+            "keywords": query.search_term
+            + (" intern" if query.internship else "")
+            + (" remote" if query.remote_only else ""),
             "page": 1,
             "ResultOnPage": min(query.results_wanted, 50),
             "datecreatedfrom": (
@@ -144,7 +147,9 @@ class SerpApiSource:
     def fetch(self, query: SourceQuery) -> list[RawJob]:
         params: dict[str, Any] = {
             "engine": "google_jobs",
-            "q": query.search_term + (" remote" if query.remote_only else ""),
+            "q": query.search_term
+            + (" internship" if query.internship else "")
+            + (" remote" if query.remote_only else ""),
             "api_key": get_settings().serpapi_key,
         }
         if query.location and not query.remote_only:

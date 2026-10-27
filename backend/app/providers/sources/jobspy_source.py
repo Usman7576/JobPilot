@@ -74,9 +74,16 @@ class JobSpySource:
             "fetch_description": settings.jobspy_fetch_description,
             "verbose": 0,
         }
+        if query.internship:
+            kwargs["search_term"] = f"{query.search_term} intern"
+            kwargs["job_type"] = "internship"
+            if self.site == "indeed":
+                # Indeed can't combine a job type with a date filter; dates are checked later.
+                kwargs.pop("hours_old")
         if self.site == "google":
             where = "remote" if query.remote_only else (query.location or "")
-            kwargs["google_search_term"] = f"{query.search_term} jobs {where} since last week"
+            what = "internships" if query.internship else "jobs"
+            kwargs["google_search_term"] = f"{query.search_term} {what} {where} since last week"
         if settings.jobspy_proxies:
             kwargs["proxies"] = settings.jobspy_proxies
 

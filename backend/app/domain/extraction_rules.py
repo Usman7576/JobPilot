@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 
 from app.domain.skills import _ALIASES, canonical_skill
-from app.models.enums import EmploymentType, RemoteType, SalaryPeriod, Seniority
+from app.models.enums import EmploymentType, PayStatus, RemoteType, SalaryPeriod, Seniority
 
 # --- Emails -------------------------------------------------------------------------------
 
@@ -64,6 +64,18 @@ def seniority_from_title(title: str) -> Seniority | None:
     return None
 
 
+_LEVEL_WORDS = re.compile(
+    r"\b(?:senior|sr|junior|jr|lead|principal|staff|head\s+of|mid[- ]level|entry[- ]level)\b\.?",
+    re.I,
+)
+
+
+def internship_role(title: str) -> str:
+    """'Senior Backend Engineer' -> 'Backend Engineer': the role to look for as an intern."""
+    role = " ".join(_LEVEL_WORDS.sub(" ", title).split())
+    return role or title.strip()
+
+
 # --- Remote type ---------------------------------------------------------------------------
 
 _HYBRID = re.compile(
@@ -111,6 +123,34 @@ def detect_employment(job_type: str | None, title: str) -> EmploymentType:
             if pattern.search(text):
                 return kind
     return EmploymentType.UNKNOWN
+
+
+# --- Pay (paid / unpaid) -------------------------------------------------------------------
+
+_UNPAID = re.compile(
+    r"\bunpaid\b(?!\s+(?:leave|time|vacation|holiday|break|overtime))"
+    r"|\bnon[- ]paid\b|\bnot\s+paid\b|\bno\s+(?:stipend|salary|pay|compensation)\b"
+    r"|\bwithout\s+(?:pay|compensation|stipend|remuneration)\b|\bvolunteer\s+(?:position|role"
+    r"|internship|opportunity|basis)\b|\bfor\s+(?:academic\s+)?credit\s+only\b"
+    r"|\bunverg(?:ü|ue)tet",
+    re.I,
+)
+_PAID = re.compile(
+    r"\bpaid\s+(?:internship|intern|position|role|opportunity|traineeship)\b|\bstipend\b"
+    r"|\ballowance\b|\bremuneration\b|\bcompensat(?:ion|ed)\b|\bsalary\b|\bhourly\s+rate\b"
+    r"|\bper\s+hour\b|/\s*(?:hr|hour)\b|\bverg(?:ü|ue)tung\b|\bverg(?:ü|ue)tet",
+    re.I,
+)
+
+
+def detect_pay(title: str, text: str, has_salary: bool) -> PayStatus:
+    """Unpaid wording wins (it's explicit); then a salary or paid wording; else unknown."""
+    head = title + " " + text[:6000]
+    if _UNPAID.search(head):
+        return PayStatus.UNPAID
+    if has_salary or _PAID.search(head):
+        return PayStatus.PAID
+    return PayStatus.UNKNOWN
 
 
 # --- Salary --------------------------------------------------------------------------------

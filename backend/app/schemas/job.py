@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Literal
 
-from app.models.enums import EmploymentType, RemoteType, SalaryPeriod, Seniority
+from app.models.enums import EmploymentType, PayStatus, RemoteType, SalaryPeriod, Seniority
 from app.schemas.common import ApiModel
 
 JobSort = Literal["posted", "discovered"]
@@ -29,6 +29,7 @@ class JobCard(ApiModel):
     salary_max: int | None
     salary_currency: str | None
     salary_period: SalaryPeriod | None
+    pay_status: PayStatus
     required_skills: list[str]
     snippet: str | None
     posted_at: datetime | None

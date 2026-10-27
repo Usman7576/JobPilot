@@ -17,9 +17,10 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
+from app.domain.extraction_rules import internship_role
 from app.domain.normalize import normalize
 from app.models import Job, SearchRun, SearchRunSource, UserJob
-from app.models.enums import SearchStatus, SourceRunStatus
+from app.models.enums import EmploymentType, SearchKind, SearchStatus, SourceRunStatus
 from app.providers.embeddings import get_embeddings
 from app.providers.sources import SourceError, SourceQuery, all_sources
 from app.services import job_store, source_guard
@@ -38,7 +39,11 @@ ACTIVE_STATUSES = (
 def build_queries(snapshot: dict[str, Any]) -> list[SourceQuery]:
     """Target titles x locations, plus a remote-only search when remote is wanted."""
     settings = get_settings()
+    internships = snapshot.get("kind") == SearchKind.INTERNSHIPS
     titles: list[str] = snapshot.get("target_titles") or []
+    if internships:
+        # "Senior Backend Engineer" and "Backend Engineer" are the same internship search.
+        titles = list(dict.fromkeys(internship_role(t) for t in titles))
     locations: list[dict[str, Any]] = snapshot.get("locations") or []
     remote_types: list[str] = snapshot.get("remote_types") or []
     days = int(snapshot.get("posted_within_days") or 7)
@@ -67,6 +72,7 @@ def build_queries(snapshot: dict[str, Any]) -> list[SourceQuery]:
             remote_only=remote,
             posted_within_days=days,
             results_wanted=0,  # filled below
+            internship=internships,
         )
         for title in titles
         for label, country, remote in places
@@ -157,9 +163,10 @@ def _scrape_source(
             for raw in source.fetch(query):
                 if not raw.title or not raw.url:
                     continue
-                result = job_store.store(
-                    session, normalize(raw), user_id=run.user_id, run_id=run.id
-                )
+                job = normalize(raw)
+                if query.internship and job.employment_type != EmploymentType.INTERNSHIP:
+                    continue  # keyword searches also return regular jobs that mention interns
+                result = job_store.store(session, job, user_id=run.user_id, run_id=run.id)
                 fetched += 1
                 counts["scraped"] += 1
                 counts["new" if result.created else "duplicates"] += 1

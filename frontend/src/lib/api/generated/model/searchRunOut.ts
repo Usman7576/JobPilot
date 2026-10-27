@@ -4,6 +4,7 @@
  * JobPilot AI API
  * OpenAPI spec version: 0.1.0
  */
+import type { SearchKind } from './searchKind';
 import type { SearchRunOutCounts } from './searchRunOutCounts';
 import type { SearchRunSourceOut } from './searchRunSourceOut';
 import type { SearchStatus } from './searchStatus';
@@ -11,6 +12,7 @@ import type { SearchTrigger } from './searchTrigger';
 
 export interface SearchRunOut {
   id: string;
+  kind: SearchKind;
   trigger: SearchTrigger;
   status: SearchStatus;
   progress: number;

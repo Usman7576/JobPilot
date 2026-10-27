@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, Conflict, NotFound, ServiceUnavailable
 from app.core.logging import get_logger
 from app.models import Preference, SearchRun, SearchRunSource, User
-from app.models.enums import SearchStatus, SearchTrigger, SourceRunStatus
+from app.models.enums import SearchKind, SearchStatus, SearchTrigger, SourceRunStatus
 from app.providers.sources import all_sources
 from app.schemas.search import SearchRunOut, SearchRunSourceOut
 from app.services.search_pipeline import ACTIVE_STATUSES
@@ -28,6 +28,7 @@ def to_out(run: SearchRun, sources: list[SearchRunSource]) -> SearchRunOut:
     registry = all_sources()
     return SearchRunOut(
         id=run.id,
+        kind=SearchKind((run.query_snapshot or {}).get("kind") or SearchKind.JOBS),
         trigger=run.trigger,
         status=run.status,
         progress=run.progress,
@@ -80,7 +81,10 @@ async def active_run(db: AsyncSession, user: User) -> SearchRun | None:
 
 
 async def start(
-    db: AsyncSession, user: User, trigger: SearchTrigger = SearchTrigger.MANUAL
+    db: AsyncSession,
+    user: User,
+    kind: SearchKind = SearchKind.JOBS,
+    trigger: SearchTrigger = SearchTrigger.MANUAL,
 ) -> SearchRunOut:
     pref = await db.get(Preference, user.id)
     if pref is None or not pref.target_titles:
@@ -92,6 +96,7 @@ async def start(
         raise Conflict("A search is already running.", run_id=str(current.id))
 
     snapshot = {
+        "kind": kind.value,
         "target_titles": pref.target_titles,
         "locations": pref.locations,
         "remote_types": pref.remote_types,

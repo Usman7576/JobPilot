@@ -26,6 +26,7 @@ from app.models.constants import EMBEDDING_DIM
 from app.models.enums import (
     EmploymentType,
     NormalizationStatus,
+    PayStatus,
     RemoteType,
     SalaryPeriod,
     Seniority,
@@ -81,6 +82,11 @@ class Job(UUIDPk, Timestamps, Base):
     salary_currency: Mapped[str | None] = mapped_column(String(3))
     salary_period: Mapped[SalaryPeriod | None] = mapped_column(
         pg_enum(SalaryPeriod, "salary_period")
+    )
+    pay_status: Mapped[PayStatus] = mapped_column(
+        pg_enum(PayStatus, "pay_status"),
+        default=PayStatus.UNKNOWN,
+        server_default=PayStatus.UNKNOWN.value,
     )
     required_skills: Mapped[list[str]] = mapped_column(
         ARRAY(Text), default=list, server_default="{}"

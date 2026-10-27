@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query, Request, status
 
 from app.core.deps import CurrentUser, DbSession
 from app.core.ratelimit import limiter
-from app.schemas.search import SearchRunOut
+from app.schemas.search import SearchRunOut, SearchStartIn
 from app.services import search_service
 
 router = APIRouter(prefix="/searches", tags=["searches"])
@@ -14,9 +14,11 @@ router = APIRouter(prefix="/searches", tags=["searches"])
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit("6/hour")
-async def start_search(request: Request, user: CurrentUser, db: DbSession) -> SearchRunOut:
-    """Start a search with the saved preferences. 409 if one is already running."""
-    return await search_service.start(db, user)
+async def start_search(
+    request: Request, user: CurrentUser, db: DbSession, body: SearchStartIn | None = None
+) -> SearchRunOut:
+    """Start a job or internship search with the saved preferences. 409 if one is running."""
+    return await search_service.start(db, user, (body or SearchStartIn()).kind)
 
 
 @router.get("")

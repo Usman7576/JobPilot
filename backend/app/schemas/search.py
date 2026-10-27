@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from app.models.enums import SearchStatus, SearchTrigger, SourceRunStatus
+from app.models.enums import SearchKind, SearchStatus, SearchTrigger, SourceRunStatus
 from app.schemas.common import ApiModel
 
 
@@ -17,8 +17,13 @@ class SearchRunSourceOut(ApiModel):
     duration_ms: int | None
 
 
+class SearchStartIn(ApiModel):
+    kind: SearchKind = SearchKind.JOBS
+
+
 class SearchRunOut(ApiModel):
     id: uuid.UUID
+    kind: SearchKind
     trigger: SearchTrigger
     status: SearchStatus
     progress: int

@@ -8,7 +8,7 @@ from decimal import Decimal
 
 from app.domain import dedupe, extraction_rules
 from app.domain.html_text import clean_description
-from app.models.enums import EmploymentType, RemoteType, SalaryPeriod, Seniority
+from app.models.enums import EmploymentType, PayStatus, RemoteType, SalaryPeriod, Seniority
 from app.providers.sources import RawJob
 
 _CURRENCIES = {"USD", "GBP", "EUR", "INR", "PKR", "CAD", "AUD", "CHF", "SGD", "AED", "NZD"}
@@ -33,6 +33,7 @@ class NormalizedJob:
     salary_max: int | None
     salary_currency: str | None
     salary_period: SalaryPeriod | None
+    pay_status: PayStatus
     required_skills: list[str]
     description_text: str | None
     contact_emails: list[str]
@@ -102,6 +103,7 @@ def normalize(raw: RawJob) -> NormalizedJob:
         salary_max=salary_max,
         salary_currency=currency,
         salary_period=period,
+        pay_status=extraction_rules.detect_pay(title, body, bool(salary_min or salary_max)),
         required_skills=skills,
         description_text=text,
         contact_emails=emails[:5],

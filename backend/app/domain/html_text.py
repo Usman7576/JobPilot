@@ -48,6 +48,8 @@ def tidy(text: str) -> str:
 def clean_description(raw: str | None, is_html: bool) -> str | None:
     if not raw:
         return None
+    if re.search(r"&lt;/?(p|div|br|li|ul|span|strong)\b", raw, re.I):
+        raw = html.unescape(raw)  # some feeds escape their HTML twice
     looks_html = is_html or bool(re.search(r"</?(p|div|br|li|ul|span|strong)\b", raw, re.I))
     text = html_to_text(raw) if looks_html else markdown_to_text(raw)
     return text or None

@@ -26,6 +26,9 @@ class SourceQuery:
     remote_only: bool
     posted_within_days: int
     results_wanted: int
+    # Internship searches: search_term is the bare role ("Backend Engineer"); each source adds
+    # its own way of asking for internships, and the pipeline keeps only real internships.
+    internship: bool = False
 
 
 @dataclass

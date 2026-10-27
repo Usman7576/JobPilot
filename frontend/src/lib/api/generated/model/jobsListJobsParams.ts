@@ -5,10 +5,14 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { JobsListJobsSort } from './jobsListJobsSort';
+import type { PayStatus } from './payStatus';
 import type { RemoteType } from './remoteType';
+import type { SearchKind } from './searchKind';
 
 export type JobsListJobsParams = {
 q?: string | null;
+kind?: SearchKind | null;
+pay?: PayStatus | null;
 source?: string | null;
 remote_type?: RemoteType | null;
 posted_within_days?: number | null;

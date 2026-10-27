@@ -69,6 +69,19 @@ class EmploymentType(StrEnum):
     UNKNOWN = "unknown"
 
 
+class PayStatus(StrEnum):
+    """Whether a posting (mostly relevant for internships) pays, from salary or wording."""
+
+    PAID = "paid"
+    UNPAID = "unpaid"
+    UNKNOWN = "unknown"
+
+
+class SearchKind(StrEnum):
+    JOBS = "jobs"
+    INTERNSHIPS = "internships"
+
+
 class SalaryPeriod(StrEnum):
     YEAR = "year"
     MONTH = "month"

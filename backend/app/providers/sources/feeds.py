@@ -11,6 +11,8 @@ import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from app.domain.extraction_rules import detect_employment
+from app.models.enums import EmploymentType
 from app.providers.sources.base import RawJob, SourceInfo, SourceQuery
 from app.providers.sources.http import cached_json, request_json
 
@@ -26,6 +28,19 @@ def title_matches(term: str, title: str, tags: list[str] | None = None) -> bool:
     haystack = (title + " " + " ".join(tags or [])).lower()
     tokens = term_tokens(term)
     return bool(tokens) and all(tok in haystack for tok in tokens)
+
+
+# Internship titles rarely repeat the full job title ("Backend Engineer" vs "Praktikum Backend
+# Development"), so internship searches match on the role's specific words only.
+_GENERIC_ROLE_WORDS = {"engineer", "engineering", "developer", "development", "specialist"}
+
+
+def role_matches(term: str, title: str, tags: list[str] | None = None) -> bool:
+    specific = [t for t in term_tokens(term) if t not in _GENERIC_ROLE_WORDS]
+    if not specific:
+        return title_matches(term, title, tags)
+    haystack = (title + " " + " ".join(tags or [])).lower()
+    return all(tok in haystack for tok in specific)
 
 
 def _recent(posted: datetime | None, days: int) -> bool:
@@ -69,7 +84,13 @@ class ArbeitnowSource:
             tags = [str(t) for t in item.get("tags") or []]
             remote = bool(item.get("remote"))
             location = str(item.get("location") or "")
-            if not title_matches(query.search_term, title, tags):
+            job_types = ", ".join(item.get("job_types") or [])
+            if query.internship:
+                if detect_employment(job_types, title) != EmploymentType.INTERNSHIP:
+                    continue
+                if not role_matches(query.search_term, title, tags):
+                    continue
+            elif not title_matches(query.search_term, title, tags):
                 continue
             if query.remote_only and not remote:
                 continue
@@ -91,7 +112,7 @@ class ArbeitnowSource:
                     description_is_html=True,
                     is_remote=remote,
                     posted_at=posted,
-                    job_type=", ".join(item.get("job_types") or []) or None,
+                    job_type=job_types or None,
                     tags=tags,
                 )
             )

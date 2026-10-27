@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Briefcase, GraduationCap, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -20,7 +20,7 @@ import {
   useJobsListJobs,
   useJobsUndismissJob,
 } from "@/lib/api/generated/jobs/jobs";
-import type { RemoteType } from "@/lib/api/generated/model";
+import type { PayStatus, RemoteType, SearchKind } from "@/lib/api/generated/model";
 import {
   usePreferencesGetPreferences,
   usePreferencesListSources,
@@ -30,9 +30,15 @@ import {
   useSearchesStartSearch,
 } from "@/lib/api/generated/searches/searches";
 import { errorMessage } from "@/lib/forms";
+import { cn } from "@/lib/utils";
 
 const PAGE = 20;
 const selectClass = "border-input bg-background h-9 rounded-md border px-2 text-sm";
+
+const KINDS: { value: SearchKind; label: string; icon: typeof Briefcase }[] = [
+  { value: "jobs", label: "Jobs", icon: Briefcase },
+  { value: "internships", label: "Internships", icon: GraduationCap },
+];
 
 function useDebounced<T>(value: T, ms = 300) {
   const [debounced, setDebounced] = useState(value);
@@ -53,6 +59,8 @@ export function JobsView() {
   const undismiss = useJobsUndismissJob();
 
   const [runId, setRunId] = useState<string | null>(null);
+  const [kind, setKind] = useState<SearchKind>("jobs");
+  const [pay, setPay] = useState<PayStatus | "">("");
   const [q, setQ] = useState("");
   const [source, setSource] = useState("");
   const [remote, setRemote] = useState<RemoteType | "">("");
@@ -60,7 +68,11 @@ export function JobsView() {
   const query = useDebounced(q);
 
   const shownRun = runId ?? active.data?.id ?? null;
+  const internships = kind === "internships";
+  const noun = internships ? "internships" : "jobs";
   const jobs = useJobsListJobs({
+    kind,
+    pay: (internships && pay) || undefined,
     q: query || undefined,
     source: source || undefined,
     remote_type: remote || undefined,
@@ -68,16 +80,19 @@ export function JobsView() {
   });
 
   const findJobs = () =>
-    start.mutate(undefined, {
-      onSuccess: (run) => setRunId(run.id),
-      onError: (e) => {
-        if (e instanceof ApiError && e.status === 409 && typeof e.problem.run_id === "string") {
-          setRunId(e.problem.run_id);
-          return;
-        }
-        toast.error(errorMessage(e));
+    start.mutate(
+      { data: { kind } },
+      {
+        onSuccess: (run) => setRunId(run.id),
+        onError: (e) => {
+          if (e instanceof ApiError && e.status === 409 && typeof e.problem.run_id === "string") {
+            setRunId(e.problem.run_id);
+            return;
+          }
+          toast.error(errorMessage(e));
+        },
       },
-    });
+    );
 
   const hide = (id: string) =>
     dismiss.mutate(
@@ -105,18 +120,47 @@ export function JobsView() {
 
   const needsPrefs = prefs.data && (!prefs.data.is_saved || !prefs.data.target_titles?.length);
   const searching = Boolean(shownRun && active.data?.is_active);
+  const filtered = Boolean(q || source || remote || (internships && pay));
 
   return (
     <>
       <PageHeader
         title="Jobs"
-        description="Fresh jobs from your sources. Match scores arrive in the next phase."
+        description="Fresh jobs and internships from your sources. Match scores arrive in the next phase."
         actions={
           <Button onClick={findJobs} disabled={start.isPending || searching || Boolean(needsPrefs)}>
-            <Search className="size-4" /> {searching ? "Searching…" : "Find jobs"}
+            <Search className="size-4" /> {searching ? "Searching…" : `Find ${noun}`}
           </Button>
         }
       />
+
+      <div
+        role="tablist"
+        aria-label="What to look for"
+        className="bg-muted mb-6 inline-flex rounded-lg p-1"
+      >
+        {KINDS.map(({ value, label, icon: Icon }) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={kind === value}
+            onClick={() => {
+              setKind(value);
+              setPay("");
+              setLimit(PAGE);
+            }}
+            className={cn(
+              "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+              kind === value
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <Icon className="size-4" aria-hidden /> {label}
+          </button>
+        ))}
+      </div>
 
       {shownRun && (
         <div className="mb-6">
@@ -172,9 +216,25 @@ export function JobsView() {
               <option value="hybrid">Hybrid</option>
               <option value="onsite">On-site</option>
             </select>
+            {internships && (
+              <select
+                aria-label="Pay"
+                className={selectClass}
+                value={pay}
+                onChange={(e) => {
+                  setPay(e.target.value as PayStatus | "");
+                  setLimit(PAGE);
+                }}
+              >
+                <option value="">Paid or unpaid</option>
+                <option value="paid">Paid only</option>
+                <option value="unpaid">Unpaid only</option>
+                <option value="unknown">Pay not stated</option>
+              </select>
+            )}
             {jobs.data && (
               <span className="text-muted-foreground self-center text-sm">
-                {jobs.data.total} jobs
+                {jobs.data.total} {noun}
               </span>
             )}
           </div>
@@ -203,11 +263,11 @@ export function JobsView() {
           ) : (
             <EmptyState
               icon={Search}
-              title={q || source || remote ? "No jobs match these filters" : "No jobs yet"}
+              title={filtered ? `No ${noun} match these filters` : `No ${noun} yet`}
               description={
-                q || source || remote
+                filtered
                   ? "Try clearing a filter."
-                  : "Click “Find jobs” to search your sources. It usually takes under a minute."
+                  : `Click “Find ${noun}” to search your sources. It usually takes under a minute.`
               }
             />
           )}

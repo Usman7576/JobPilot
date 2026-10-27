@@ -6,6 +6,7 @@
  */
 import type { EmploymentType } from './employmentType';
 import type { JobSourceLink } from './jobSourceLink';
+import type { PayStatus } from './payStatus';
 import type { RemoteType } from './remoteType';
 import type { SalaryPeriod } from './salaryPeriod';
 import type { Seniority } from './seniority';
@@ -23,6 +24,7 @@ export interface JobDetail {
   salary_max: number | null;
   salary_currency: string | null;
   salary_period: SalaryPeriod | null;
+  pay_status: PayStatus;
   required_skills: string[];
   snippet: string | null;
   posted_at: string | null;

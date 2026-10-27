@@ -230,3 +230,43 @@ async def test_jobs_and_searches_are_private(
     assert (await client.get("/api/v1/jobs")).json()["total"] == 0
     r = await client.post(f"/api/v1/jobs/{job_id}/dismiss", headers=csrf_headers(client))
     assert r.status_code == 404
+
+
+async def test_internship_search_and_pay_filter(
+    client: AsyncClient, mailer: FakeMailer, sources: dict[str, FakeSource]
+) -> None:
+    paid = raw_job("alpha", 5, title="Python Intern", company="Paid Co")
+    paid.description = "<p>Paid internship with a monthly stipend.</p>"
+    unpaid = raw_job("alpha", 6, title="Python Intern", company="Free Co")
+    unpaid.description = "<p>This is an unpaid internship.</p>"
+    unstated = raw_job("beta", 7, title="Python Internship", company="Quiet Co")
+    unstated.description = "<p>Learn Python with us.</p>"
+    sources["alpha"].jobs = [paid, unpaid, raw_job("alpha", 1)]  # plus one regular job
+    sources["beta"].jobs = [unstated]
+
+    await signed_in(client, mailer)
+    await save_prefs(client, target_titles=["Senior Python Developer"])
+    r = await client.post(
+        "/api/v1/searches", json={"kind": "internships"}, headers=csrf_headers(client)
+    )
+    assert r.status_code == 202, r.text
+    run = (await client.get(f"/api/v1/searches/{r.json()['id']}")).json()
+    assert run["kind"] == "internships" and run["status"] == "completed"
+    query = sources["alpha"].queries[0]
+    assert query.internship and query.search_term == "Python Developer"
+    # The regular job the keyword search returned is dropped: only internships are stored.
+    assert run["counts"]["new"] == 3
+
+    async def titles(**params: str) -> list[str]:
+        page = (await client.get("/api/v1/jobs", params=params)).json()
+        return sorted(i["company_name"] for i in page["items"])
+
+    assert await titles(kind="internships") == ["Free Co", "Paid Co", "Quiet Co"]
+    assert await titles(kind="internships", pay="paid") == ["Paid Co"]
+    assert await titles(kind="internships", pay="unpaid") == ["Free Co"]
+    assert await titles(kind="internships", pay="unknown") == ["Quiet Co"]
+    assert await titles(kind="jobs") == []
+
+    # A normal search (no body) is still a job search.
+    await start(client)
+    assert await titles(kind="jobs") == ["Acme Inc"]
