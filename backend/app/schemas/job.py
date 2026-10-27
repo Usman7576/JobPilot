@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Literal
 
 from app.models.enums import EmploymentType, PayStatus, RemoteType, SalaryPeriod, Seniority
+from app.schemas.application import ApplicationRef
 from app.schemas.common import ApiModel
 from app.schemas.match import MatchDetail, MatchSummary
 
@@ -48,6 +49,7 @@ class JobDetail(JobCard):
     contact_emails: list[str]
     source_links: list[JobSourceLink]
     match: MatchDetail | None
+    application: ApplicationRef | None
 
 
 class JobPage(ApiModel):

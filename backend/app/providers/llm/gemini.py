@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, date, datetime
 from typing import Any
 
 import httpx
@@ -20,6 +21,10 @@ from app.providers.llm.base import (
 )
 
 REQUEST_TIMEOUT_MS = 90_000
+
+
+def _today() -> date:
+    return datetime.now(UTC).date()
 
 
 class _Transient(Exception):
@@ -50,6 +55,9 @@ class GeminiProvider:
             ),
         )
         self._models: dict[ModelTier, str] = {"smart": smart_model, "fast": fast_model}
+        # model -> UTC day its free daily quota ran out (so the rest of that day goes straight
+        # to the fallback model).
+        self._spent_today: dict[str, date] = {}
 
     def generate_json(
         self,
@@ -70,13 +78,18 @@ class GeminiProvider:
             response_mime_type="application/json",
             response_json_schema=schema,
         )
+        fallback = self._models["fast"]
+        if model != fallback and self._spent_today.get(model) == _today():
+            model = fallback  # its free daily quota is used up: don't waste a request asking
         try:
             response = self._call(model, user, config)
-        except _Overloaded:
-            # Busy models answer 503 for a while; the lighter model usually still has room.
-            fallback = self._models["fast"]
+        except (_Overloaded, LLMQuotaExhausted) as exc:
+            # Busy models answer 503 for a while, and each model has its own free daily
+            # quota (Flash: only 20 requests): the lighter model usually still has room.
             if fallback == model:
                 raise
+            if isinstance(exc, LLMQuotaExhausted):
+                self._spent_today[model] = _today()
             model = fallback
             response = self._call(model, user, config)
 

@@ -24,14 +24,16 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ApplicationOut,
   HTTPValidationError,
   JobDetail,
   JobPage,
-  JobsListJobsParams
+  JobsListJobsParams,
+  PrepareIn
 } from '../model';
 
 import { customFetch } from '../../fetcher';
-import type { ErrorType } from '../../fetcher';
+import type { ErrorType , BodyType } from '../../fetcher';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -479,4 +481,167 @@ export const useJobsRescoreJob = <TError = ErrorType<HTTPValidationError>,
         TContext
       > => {
       return useMutation(getJobsRescoreJobMutationOptions(options), queryClient);
+    }
+    export const getJobsPrepareApplicationUrl = (jobId: string,) => {
+
+
+
+
+  return `/api/v1/jobs/${jobId}/prepare-application`
+}
+
+/**
+ * Find a contact and write an email + cover letter in the background; poll the result.
+ * @summary Prepare Application
+ */
+export const jobsPrepareApplication = async (jobId: string,
+    prepareIn: PrepareIn, options?: Parameters<typeof customFetch>[1]): Promise<ApplicationOut> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ApplicationOut>(getJobsPrepareApplicationUrl(jobId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(prepareIn)
+  }
+);}
+
+
+
+
+
+export const getJobsPrepareApplicationMutationKey = () => ['jobsPrepareApplication'] as const;
+
+export const getJobsPrepareApplicationMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof jobsPrepareApplication>>, TError,JobsPrepareApplicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof jobsPrepareApplication>>, TError,JobsPrepareApplicationMutationVariables, TContext> => {
+
+const mutationKey = getJobsPrepareApplicationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof jobsPrepareApplication>>, JobsPrepareApplicationMutationVariables> = (props) => {
+          const {jobId,data} = props ?? {};
+
+          return  jobsPrepareApplication(jobId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type JobsPrepareApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof jobsPrepareApplication>>>
+    export type JobsPrepareApplicationMutationBody = BodyType<PrepareIn>
+    export type JobsPrepareApplicationMutationError = ErrorType<HTTPValidationError>
+    export type JobsPrepareApplicationMutationVariables = {jobId: string;data: BodyType<PrepareIn>}
+
+    /**
+ * @summary Prepare Application
+ */
+export const useJobsPrepareApplication = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof jobsPrepareApplication>>, TError,JobsPrepareApplicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof jobsPrepareApplication>>,
+        TError,
+        JobsPrepareApplicationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getJobsPrepareApplicationMutationOptions(options), queryClient);
+    }
+    export const getJobsSaveJobUrl = (jobId: string,) => {
+
+
+
+
+  return `/api/v1/jobs/${jobId}/save`
+}
+
+/**
+ * Save for later (an application in "saved", with no drafts yet).
+ * @summary Save Job
+ */
+export const jobsSaveJob = async (jobId: string, options?: Parameters<typeof customFetch>[1]): Promise<ApplicationOut> => {
+
+  return customFetch<ApplicationOut>(getJobsSaveJobUrl(jobId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getJobsSaveJobMutationKey = () => ['jobsSaveJob'] as const;
+
+export const getJobsSaveJobMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof jobsSaveJob>>, TError,JobsSaveJobMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof jobsSaveJob>>, TError,JobsSaveJobMutationVariables, TContext> => {
+
+const mutationKey = getJobsSaveJobMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof jobsSaveJob>>, JobsSaveJobMutationVariables> = (props) => {
+          const {jobId} = props ?? {};
+
+          return  jobsSaveJob(jobId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type JobsSaveJobMutationResult = NonNullable<Awaited<ReturnType<typeof jobsSaveJob>>>
+
+    export type JobsSaveJobMutationError = ErrorType<HTTPValidationError>
+    export type JobsSaveJobMutationVariables = {jobId: string}
+
+    /**
+ * @summary Save Job
+ */
+export const useJobsSaveJob = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof jobsSaveJob>>, TError,JobsSaveJobMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof jobsSaveJob>>,
+        TError,
+        JobsSaveJobMutationVariables,
+        TContext
+      > => {
+      return useMutation(getJobsSaveJobMutationOptions(options), queryClient);
     }

@@ -15,6 +15,7 @@ from app.providers.llm.base import (
     LLMNotConfigured,
     LLMRateLimited,
     LLMResult,
+    LLMUnavailable,
 )
 
 
@@ -106,7 +107,7 @@ class OpenAICompatibleProvider:
         try:
             resp = self._post_with_retry(body)
         except _Transient as exc:
-            raise LLMError(f"{self.name} is unavailable right now") from exc
+            raise LLMUnavailable(f"{self.name} is unavailable right now") from exc
         if resp.status_code == 429:
             raise LLMRateLimited(f"{self.name} rate limit reached")
         if resp.status_code in (401, 403):

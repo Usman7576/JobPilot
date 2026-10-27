@@ -4,6 +4,7 @@
  * JobPilot AI API
  * OpenAPI spec version: 0.1.0
  */
+import type { ApplicationRef } from './applicationRef';
 import type { EmploymentType } from './employmentType';
 import type { JobSourceLink } from './jobSourceLink';
 import type { MatchDetail } from './matchDetail';
@@ -39,4 +40,5 @@ export interface JobDetail {
   description_text: string | null;
   contact_emails: string[];
   source_links: JobSourceLink[];
+  application: ApplicationRef | null;
 }

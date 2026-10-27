@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "greeting": { "type": "string" },
+    "body": { "type": "string" },
+    "skills_used": { "type": "array", "items": { "type": "string" } },
+    "achievement_ref": { "type": "string" },
+    "job_detail": { "type": "string" }
+  },
+  "required": ["greeting", "body", "skills_used", "achievement_ref", "job_detail"]
+}

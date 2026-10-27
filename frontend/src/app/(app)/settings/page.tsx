@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { PageHeader } from "@/components/common/page-header";
 import { PreferencesForm } from "@/components/preferences/preferences-form";
+import { GmailCard } from "@/components/settings/gmail-card";
 
 import { AccountSettings } from "./account-settings";
 
@@ -10,9 +12,21 @@ export const metadata: Metadata = { title: "Settings" };
 export default function SettingsPage() {
   return (
     <>
-      <PageHeader title="Settings" description="Your account, job preferences and sources." />
+      <PageHeader
+        title="Settings"
+        description="Your account, connected accounts, job preferences and sources."
+      />
       <div className="grid gap-10">
         <AccountSettings />
+        <section className="grid gap-4">
+          <div className="grid gap-1">
+            <h2 className="text-lg font-semibold">Connected accounts</h2>
+          </div>
+          {/* Reads ?gmail=... after Google redirects back, so it needs a Suspense boundary. */}
+          <Suspense>
+            <GmailCard />
+          </Suspense>
+        </section>
         <section className="grid gap-4">
           <div className="grid gap-1">
             <h2 className="text-lg font-semibold">Job preferences</h2>

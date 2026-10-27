@@ -1,8 +1,19 @@
 "use client";
 
-import { ArrowLeft, Building2, Clock, ExternalLink, Mail, MapPin, Wallet } from "lucide-react";
+import {
+  ArrowLeft,
+  Bookmark,
+  Building2,
+  Clock,
+  ExternalLink,
+  FileText,
+  Mail,
+  MapPin,
+  Sparkles,
+  Wallet,
+} from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -14,7 +25,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/fetcher";
-import { useJobsGetJob, useJobsRescoreJob } from "@/lib/api/generated/jobs/jobs";
+import {
+  useJobsGetJob,
+  useJobsPrepareApplication,
+  useJobsRescoreJob,
+  useJobsSaveJob,
+} from "@/lib/api/generated/jobs/jobs";
 import { useResumesGetActiveResume } from "@/lib/api/generated/resumes/resumes";
 import { formatSalary, REMOTE_LABEL, timeAgo } from "@/lib/format";
 import { errorMessage } from "@/lib/forms";
@@ -36,6 +52,9 @@ export function JobDetailView() {
     },
   });
   const resume = useResumesGetActiveResume();
+  const router = useRouter();
+  const prepare = useJobsPrepareApplication();
+  const save = useJobsSaveJob();
   const rescore = useJobsRescoreJob();
   const scoredAt = job.data?.match?.scored_at ?? null;
   const waiting = Boolean(waitingSince && scoredAt === waitingSince.scoredAt);
@@ -131,7 +150,51 @@ export function JobDetailView() {
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button asChild>
+          {j.application && j.application.status !== "saved" ? (
+            <Button asChild>
+              <Link href={`/applications/${j.application.id}`}>
+                <FileText className="size-4" /> Open application
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              disabled={prepare.isPending || resume.data?.status !== "parsed"}
+              title={resume.data?.status !== "parsed" ? "Upload your resume first" : undefined}
+              onClick={() =>
+                prepare.mutate(
+                  { jobId: id, data: {} },
+                  {
+                    onSuccess: (a) => router.push(`/applications/${a.id}`),
+                    onError: (e) => toast.error(errorMessage(e)),
+                  },
+                )
+              }
+            >
+              <Sparkles className="size-4" />
+              {prepare.isPending ? "Starting…" : "Prepare application"}
+            </Button>
+          )}
+          {!j.application && (
+            <Button
+              variant="outline"
+              disabled={save.isPending}
+              onClick={() =>
+                save.mutate(
+                  { jobId: id },
+                  {
+                    onSuccess: () => {
+                      toast.success("Saved for later");
+                      void job.refetch();
+                    },
+                    onError: (e) => toast.error(errorMessage(e)),
+                  },
+                )
+              }
+            >
+              <Bookmark className="size-4" /> Save for later
+            </Button>
+          )}
+          <Button asChild variant="outline">
             {/* Third-party link: no referrer, no access to this window. */}
             <a href={applyUrl} target="_blank" rel="noopener noreferrer">
               View posting <ExternalLink className="size-4" />

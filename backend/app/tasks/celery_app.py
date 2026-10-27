@@ -16,6 +16,7 @@ celery_app = Celery(
         "app.tasks.maintenance_tasks",
         "app.tasks.resume_tasks",
         "app.tasks.matching_tasks",
+        "app.tasks.application_tasks",
         "app.tasks.search_tasks",
     ],
 )

@@ -1,7 +1,8 @@
 """Versioned prompt files: `<name>/v<N>.md` with YAML front matter, rendered with Jinja2.
 
 Front matter keys: id, version, model_tier (smart|fast), temperature, max_tokens, and
-optionally schema (a JSON Schema file next to the prompt). The body has a
+optionally schema (a JSON Schema file next to the prompt) and role (default|writing:
+writing prompts can use a separate model, WRITING_LLM_PROVIDER). The body has a
 `<!-- system -->` section and a `<!-- user -->` section.
 """
 
@@ -21,6 +22,7 @@ _SYSTEM_MARK = "<!-- system -->"
 _USER_MARK = "<!-- user -->"
 
 ModelTier = Literal["smart", "fast"]
+PromptRole = Literal["default", "writing"]
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,7 @@ class PromptSpec:
     schema: dict[str, Any] | None
     system_template: str
     user_template: str
+    role: PromptRole = "default"
 
     @property
     def ref(self) -> str:
@@ -80,6 +83,7 @@ def load_prompt(name: str, version: int) -> PromptSpec:
         schema=schema,
         system_template=system.strip(),
         user_template=user.strip(),
+        role=meta.get("role", "default"),
     )
 
 

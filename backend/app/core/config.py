@@ -42,10 +42,24 @@ class Settings(BaseSettings):
     default_daily_send_cap: int = 25
     max_daily_send_cap: int = 50
     default_follow_up_days: int = 7
+    # Each send waits a random 30-120 s (cancellable) and sends are >= 30 s apart per user.
+    send_delay_min_seconds: int = 30
+    send_delay_max_seconds: int = 120
+    send_spacing_seconds: int = 30
+    # gmail: the user's connected Gmail. smtp: local testing only, delivers through SMTP_URL
+    # (Mailpit in dev) and is refused in production.
+    application_send_backend: Literal["gmail", "smtp"] = "gmail"
+    # Optional: finds recruiter emails when a posting has none (free plan: 25 searches/month).
+    hunter_api_key: str = ""
 
     # --- AI ---
     default_monthly_ai_budget_usd: float = 0.0
     llm_provider: Literal["gemini", "groq", "ollama", "fake"] = "gemini"
+    # Optional separate model for writing (emails, cover letters); empty = same as above.
+    writing_llm_provider: Literal["", "gemini", "groq", "ollama", "anthropic", "fake"] = ""
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-5-5"
+    anthropic_fast_model: str = "claude-haiku-5-5"
     gemini_api_key: str = ""
     # "-latest" aliases follow Google's newest Flash models, so free-tier model
     # retirements don't break the app. Pin exact ids here if you need stability.
@@ -116,6 +130,10 @@ class Settings(BaseSettings):
     @property
     def google_login_redirect_uri(self) -> str:
         return f"{self.app_base_url}/api/v1/auth/google/callback"
+
+    @property
+    def google_gmail_redirect_uri(self) -> str:
+        return f"{self.app_base_url}/api/v1/integrations/gmail/callback"
 
     @property
     def google_login_enabled(self) -> bool:

@@ -1,5 +1,7 @@
+export * from './applications/applications';
 export * from './auth/auth';
 export * from './health/health';
+export * from './integrations/integrations';
 export * from './jobs/jobs';
 export * from './preferences/preferences';
 export * from './resumes/resumes';

@@ -48,7 +48,12 @@ def new_pkce() -> PkcePair:
 
 
 def authorization_url(
-    *, redirect_uri: str, state: str, code_challenge: str, scopes: tuple[str, ...] = LOGIN_SCOPES
+    *,
+    redirect_uri: str,
+    state: str,
+    code_challenge: str,
+    scopes: tuple[str, ...] = LOGIN_SCOPES,
+    extra: dict[str, str] | None = None,
 ) -> str:
     params = {
         "client_id": get_settings().google_client_id,
@@ -59,6 +64,7 @@ def authorization_url(
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
         "prompt": "select_account",
+        **(extra or {}),
     }
     return f"{AUTH_URL}?{urlencode(params)}"
 

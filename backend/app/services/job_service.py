@@ -10,7 +10,7 @@ from sqlalchemy import Select, and_, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, NotFound, ServiceUnavailable
-from app.models import Job, JobMatch, JobSourceRecord, Resume, User, UserJob
+from app.models import Application, Job, JobMatch, JobSourceRecord, Resume, User, UserJob
 from app.models.enums import (
     EmploymentType,
     PayStatus,
@@ -20,6 +20,7 @@ from app.models.enums import (
     SearchKind,
 )
 from app.providers.sources import all_sources
+from app.schemas.application import ApplicationRef
 from app.schemas.job import JobCard, JobDetail, JobPage, JobSort, JobSourceLink
 from app.schemas.match import MatchDetail, MatchSummary, RedFlagOut
 
@@ -251,7 +252,21 @@ async def detail(db: AsyncSession, user: User, job_id: uuid.UUID) -> JobDetail:
         contact_emails=job.contact_emails,
         source_links=links,
         match=_detail(match),
+        application=await _application_ref(db, user, job.id),
     )
+
+
+async def _application_ref(
+    db: AsyncSession, user: User, job_id: uuid.UUID
+) -> ApplicationRef | None:
+    row = (
+        await db.execute(
+            select(Application.id, Application.status).where(
+                Application.user_id == user.id, Application.job_id == job_id
+            )
+        )
+    ).first()
+    return ApplicationRef(id=row[0], status=row[1]) if row else None
 
 
 async def set_dismissed(db: AsyncSession, user: User, job_id: uuid.UUID, dismissed: bool) -> None:

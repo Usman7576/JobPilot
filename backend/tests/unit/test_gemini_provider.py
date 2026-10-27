@@ -14,9 +14,10 @@ from app.providers.llm.gemini import GeminiProvider
 
 
 class _Models:
-    def __init__(self, busy: set[str], slow: set[str]) -> None:
+    def __init__(self, busy: set[str], slow: set[str], spent: set[str]) -> None:
         self.busy = busy
         self.slow = slow
+        self.spent = spent
         self.calls: list[str] = []
 
     def generate_content(self, *, model: str, contents: str, config: Any) -> Any:
@@ -25,15 +26,20 @@ class _Models:
             raise errors.ServerError(503, {"error": {"message": "high demand"}})
         if model in self.slow:
             raise httpx.ReadTimeout("timed out")
+        if model in self.spent:
+            raise errors.ClientError(
+                429,
+                {"error": {"message": "Quota exceeded: GenerateRequestsPerDayPerProjectPerModel"}},
+            )
         usage = SimpleNamespace(prompt_token_count=3, candidates_token_count=2)
         return SimpleNamespace(text='{"ok": true}', usage_metadata=usage)
 
 
 def _provider(
-    busy: set[str] = frozenset(), slow: set[str] = frozenset()
+    busy: set[str] = frozenset(), slow: set[str] = frozenset(), spent: set[str] = frozenset()
 ) -> tuple[GeminiProvider, _Models]:
     provider = GeminiProvider("test-key", "smart-model", "fast-model")
-    models = _Models(set(busy), set(slow))
+    models = _Models(set(busy), set(slow), set(spent))
     provider._client = SimpleNamespace(models=models)  # type: ignore[assignment]
     return provider, models
 
@@ -68,3 +74,11 @@ def test_timed_out_smart_model_falls_back_to_fast_model() -> None:
     result = provider.generate_json(_prompt(), schema={}, tier="smart")
     assert result.model == "fast-model"
     assert models.calls == ["smart-model", "fast-model"]  # a timeout isn't retried
+
+
+def test_spent_daily_quota_moves_to_the_fast_model_for_the_day() -> None:
+    provider, models = _provider(spent={"smart-model"})
+    assert provider.generate_json(_prompt(), schema={}, tier="smart").model == "fast-model"
+    assert provider.generate_json(_prompt(), schema={}, tier="smart").model == "fast-model"
+    # The second request didn't waste a call on the exhausted model.
+    assert models.calls == ["smart-model", "fast-model", "fast-model"]

@@ -81,7 +81,7 @@ def generate[T](
     """
     if prompt.spec.schema is None:
         raise ValueError(f"prompt {prompt.spec.ref} has no JSON schema")
-    llm = get_llm()
+    llm = get_llm(prompt.spec.role)
     hint: str | None = None
     for attempt in range(2):
         reserve_request()

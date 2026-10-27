@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "properties": {
+    "tweaks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "bullet_id": { "type": "string" },
+          "suggested": { "type": "string" },
+          "rationale": { "type": "string" },
+          "emphasized_skills": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["bullet_id", "suggested", "rationale", "emphasized_skills"]
+      }
+    }
+  },
+  "required": ["tweaks"]
+}

@@ -22,6 +22,8 @@ _test_db = os.environ.get(
 os.environ["DATABASE_URL"] = _test_db
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ["LLM_PROVIDER"] = "fake"
+os.environ["WRITING_LLM_PROVIDER"] = ""
+os.environ["HUNTER_API_KEY"] = ""
 os.environ["EMBEDDING_PROVIDER"] = "fake"
 os.environ["LLM_RPM"] = "0"
 os.environ["LLM_RPD"] = "0"

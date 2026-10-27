@@ -90,6 +90,8 @@ class Application(UUIDPk, Timestamps, Base):
     notes: Mapped[str | None] = mapped_column(EncryptedText)
     kanban_position: Mapped[float] = mapped_column(Float, default=0.0, server_default="0")
     sheet_row_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Why the last generation or send didn't work (shown in the Prepare panel).
+    last_error: Mapped[str | None] = mapped_column(Text)
 
 
 class ApplicationDraft(UUIDPk, Timestamps, Base):
