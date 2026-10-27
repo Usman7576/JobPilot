@@ -6,6 +6,7 @@ import hashlib
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,8 +29,11 @@ from app.providers.mailer import Mailer, OutgoingMail
 
 log = get_logger(__name__)
 
-# Spent on unknown emails so login timing doesn't reveal whether an account exists.
-_DUMMY_HASH = security.hash_password("timing-equalizer-password")
+
+@lru_cache
+def _dummy_hash() -> str:
+    """Spent on unknown emails so login timing doesn't reveal whether an account exists."""
+    return security.hash_password("timing-equalizer-password")
 
 
 @dataclass(frozen=True)
@@ -147,7 +151,7 @@ async def verify_email(db: AsyncSession, token: str) -> User:
 async def authenticate(db: AsyncSession, *, email: str, password: str) -> User:
     user = await get_user_by_email(db, email)
     if user is None or user.password_hash is None:
-        security.verify_password(password, _DUMMY_HASH)
+        security.verify_password(password, _dummy_hash())
         raise InvalidCredentials()
     if not security.verify_password(password, user.password_hash):
         raise InvalidCredentials()

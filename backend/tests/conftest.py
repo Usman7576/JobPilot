@@ -21,6 +21,12 @@ _test_db = os.environ.get(
 )
 os.environ["DATABASE_URL"] = _test_db
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+os.environ["LLM_PROVIDER"] = "fake"
+os.environ["EMBEDDING_PROVIDER"] = "fake"
+os.environ["LLM_RPM"] = "0"
+os.environ["LLM_RPD"] = "0"
+os.environ["CELERY_TASK_ALWAYS_EAGER"] = "true"
+os.environ["PASSWORD_HASH_MEMORY_KIB"] = "8192"
 
 if sys.platform == "win32":  # psycopg's async mode needs the selector loop on Windows
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined]
@@ -35,7 +41,10 @@ from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import async_session_factory  # noqa: E402
 from app.main import app  # noqa: E402
+from app.providers.llm import set_llm_override  # noqa: E402
+from app.providers.llm.fake import FakeLLM  # noqa: E402
 from app.providers.mailer import OutgoingMail, get_mailer  # noqa: E402
+from app.providers.storage import LocalStorage, set_storage_override  # noqa: E402
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -90,6 +99,22 @@ def mailer() -> Iterator[FakeMailer]:
     app.dependency_overrides.pop(get_mailer, None)
 
 
+@pytest.fixture(autouse=True)
+def storage(tmp_path_factory: pytest.TempPathFactory) -> Iterator[LocalStorage]:
+    store = LocalStorage(str(tmp_path_factory.mktemp("uploads")))
+    set_storage_override(store)
+    yield store
+    set_storage_override(None)
+
+
+@pytest.fixture
+def fake_llm() -> Iterator[FakeLLM]:
+    fake = FakeLLM()
+    set_llm_override(fake)
+    yield fake
+    set_llm_override(None)
+
+
 @pytest.fixture
 async def client(mailer: FakeMailer, clean_tables: None) -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
@@ -128,3 +153,10 @@ async def login(
         headers=csrf_headers(client),
     )
     assert r.status_code == 200, r.text
+
+
+async def signed_in(
+    client: AsyncClient, mailer: FakeMailer, email: str = "ada@example.com"
+) -> None:
+    await signup_and_verify(client, mailer, email=email)
+    await login(client, email=email)

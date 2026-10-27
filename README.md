@@ -72,6 +72,35 @@ then run `wsl --shutdown` and restart Docker Desktop.
 5. Reload: you stay signed in. After 15 minutes the access token expires and is refreshed
    silently. Sign out from the avatar menu.
 
+## AI resume parsing (free Gemini key)
+
+Create a free key at https://aistudio.google.com/apikey and set `GEMINI_API_KEY` in `.env`.
+Without it, uploads are stored and you'll see "AI parsing isn't set up yet". Embeddings run
+locally with fastembed; the first run downloads the model (~220 MB) into `data/models`.
+
+## Low-memory mode: API and worker without Docker builds
+
+Building the backend image needs a lot of RAM. On a tight machine, run only the data services
+in Docker and the Python processes directly (needs [uv](https://docs.astral.sh/uv/)):
+
+```bash
+docker compose up -d postgres redis mailpit
+```
+
+```bash
+cp backend/.env.host.example backend/.env.host
+```
+
+Then, in `backend/`, in two terminals:
+
+```bash
+uv run --env-file ../.env --env-file .env.host uvicorn app.main:app --port 8000 --reload
+```
+
+```bash
+uv run --env-file ../.env --env-file .env.host celery -A app.tasks.celery_app worker -P solo -Q default,scrape,llm,email,sync -l info
+```
+
 ## Google sign-in (optional, free)
 
 1. In [Google Cloud Console](https://console.cloud.google.com/) create a project, configure the

@@ -1,0 +1,121 @@
+{
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "contact": {
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "location": { "type": "string" },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string" }
+            },
+            "required": ["label", "url"]
+          }
+        }
+      },
+      "required": ["email", "phone", "location", "links"]
+    },
+    "summary": { "type": "string" },
+    "total_years_experience": { "type": "number" },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": ["language", "framework", "tool", "cloud", "database", "soft", "domain", "other"]
+          },
+          "proficiency": {
+            "type": "string",
+            "enum": ["beginner", "intermediate", "advanced", "expert"]
+          },
+          "evidence": { "type": "string" }
+        },
+        "required": ["name", "category", "proficiency", "evidence"]
+      }
+    },
+    "work_history": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "company": { "type": "string" },
+          "location": { "type": "string" },
+          "start": { "type": "string" },
+          "end": { "type": "string" },
+          "bullets": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["title", "company", "location", "start", "end", "bullets"]
+      }
+    },
+    "education": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "institution": { "type": "string" },
+          "degree": { "type": "string" },
+          "field": { "type": "string" },
+          "start": { "type": "string" },
+          "end": { "type": "string" },
+          "gpa": { "type": "string" }
+        },
+        "required": ["institution", "degree", "field", "start", "end", "gpa"]
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "technologies": { "type": "array", "items": { "type": "string" } },
+          "url": { "type": "string" },
+          "bullets": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["name", "description", "technologies", "url", "bullets"]
+      }
+    },
+    "certifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "issuer": { "type": "string" },
+          "date": { "type": "string" }
+        },
+        "required": ["name", "issuer", "date"]
+      }
+    },
+    "preferred_roles": { "type": "array", "items": { "type": "string" } },
+    "seniority": {
+      "type": "string",
+      "enum": ["intern", "junior", "mid", "senior", "staff", "principal", "manager", "director"]
+    }
+  },
+  "required": [
+    "name",
+    "contact",
+    "summary",
+    "total_years_experience",
+    "skills",
+    "work_history",
+    "education",
+    "projects",
+    "certifications",
+    "preferred_roles",
+    "seniority"
+  ]
+}

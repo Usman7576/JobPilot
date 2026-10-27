@@ -2,7 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Pages that need a signed-in user. The API still validates every request; this only
 // decides whether to send the visitor to /login first.
-const PROTECTED_PREFIXES = ["/onboarding", "/jobs", "/applications", "/dashboard", "/settings"];
+const PROTECTED_PREFIXES = [
+  "/onboarding",
+  "/jobs",
+  "/applications",
+  "/dashboard",
+  "/profile",
+  "/settings",
+];
 const SESSION_HINT_COOKIE = "jp_session";
 
 export function proxy(request: NextRequest) {

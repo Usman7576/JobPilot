@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = 30
     verification_token_ttl_hours: int = 24
     password_reset_ttl_minutes: int = 60
+    password_hash_memory_kib: int = 65_536
     google_client_id: str = ""
     google_client_secret: str = ""
 
@@ -42,8 +43,35 @@ class Settings(BaseSettings):
     max_daily_send_cap: int = 50
     default_follow_up_days: int = 7
 
-    # --- AI defaults ---
+    # --- AI ---
     default_monthly_ai_budget_usd: float = 0.0
+    llm_provider: Literal["gemini", "groq", "ollama", "fake"] = "gemini"
+    gemini_api_key: str = ""
+    # "-latest" aliases follow Google's newest Flash models, so free-tier model
+    # retirements don't break the app. Pin exact ids here if you need stability.
+    gemini_model: str = "gemini-flash-latest"
+    gemini_fast_model: str = "gemini-flash-lite-latest"
+    groq_api_key: str = ""
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_model: str = "llama-3.3-70b-versatile"
+    groq_fast_model: str = "llama-3.1-8b-instant"
+    ollama_base_url: str = "http://host.docker.internal:11434/v1"
+    ollama_model: str = "qwen2.5:7b"
+    # Free tiers are limited by requests, not dollars. 0 disables the limit.
+    llm_rpm: int = 10
+    llm_rpd: int = 500
+    embedding_provider: Literal["fastembed", "fake"] = "fastembed"
+    embedding_model: str = "BAAI/bge-base-en-v1.5"
+    model_cache_dir: str = "/data/models"
+
+    # --- Storage / uploads ---
+    storage_backend: Literal["local"] = "local"
+    local_storage_path: str = "/data/uploads"
+    max_upload_mb: int = 5
+    max_resume_pages: int = 10
+
+    # --- Celery ---
+    celery_task_always_eager: bool = False
 
     # --- Transactional email ---
     mail_backend: Literal["console", "smtp"] = "console"

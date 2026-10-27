@@ -18,7 +18,7 @@ RUN uv sync --frozen --no-install-project
 COPY . .
 
 RUN useradd --create-home --uid 1000 app \
-    && mkdir -p /data/uploads \
+    && mkdir -p /data/uploads /data/models \
     && chown -R app:app /data /app
 USER app
 

@@ -12,7 +12,7 @@ celery_app = Celery(
     "jobpilot",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.tasks.maintenance_tasks"],
+    include=["app.tasks.maintenance_tasks", "app.tasks.resume_tasks"],
 )
 
 celery_app.conf.update(
@@ -26,9 +26,13 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     result_expires=86400,
     task_default_queue="default",
+    # Tests run tasks inline instead of through Redis.
+    task_always_eager=settings.celery_task_always_eager,
+    task_eager_propagates=settings.celery_task_always_eager,
     # Longest send countdown is 120 s; keep the visibility timeout well above it.
     broker_transport_options={"visibility_timeout": 3600},
     task_routes={
+        "app.tasks.resume_tasks.parse_resume": {"queue": "llm"},
         "app.tasks.search_tasks.*": {"queue": "scrape"},
         "app.tasks.matching_tasks.*": {"queue": "llm"},
         "app.tasks.application_tasks.*": {"queue": "llm"},

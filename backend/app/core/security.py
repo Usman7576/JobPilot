@@ -4,6 +4,7 @@ import hashlib
 import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from functools import lru_cache
 from typing import Any
 from uuid import UUID
 
@@ -23,22 +24,27 @@ CSRF_HEADER = "x-csrf-token"
 REFRESH_COOKIE_PATH = "/api/v1/auth"
 
 _JWT_ALG = "HS256"
-_hasher = PasswordHasher()
+
+
+@lru_cache
+def _hasher() -> PasswordHasher:
+    # argon2id defaults (64 MiB); tests lower the memory cost to stay fast and light.
+    return PasswordHasher(memory_cost=get_settings().password_hash_memory_kib)
 
 
 def hash_password(password: str) -> str:
-    return _hasher.hash(password)
+    return _hasher().hash(password)
 
 
 def verify_password(password: str, password_hash: str) -> bool:
     try:
-        return _hasher.verify(password_hash, password)
+        return _hasher().verify(password_hash, password)
     except (VerificationError, InvalidHashError):
         return False
 
 
 def password_needs_rehash(password_hash: str) -> bool:
-    return _hasher.check_needs_rehash(password_hash)
+    return _hasher().check_needs_rehash(password_hash)
 
 
 def new_opaque_token() -> str:

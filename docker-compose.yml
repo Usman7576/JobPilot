@@ -10,6 +10,7 @@ x-backend: &backend
   volumes:
     - ./backend:/app
     - uploads:/data/uploads
+    - models:/data/models
   depends_on:
     postgres:
       condition: service_healthy
@@ -46,10 +47,13 @@ services:
 
   api:
     <<: *backend
-    command: >
-      sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-             --proxy-headers --forwarded-allow-ips '*'"
+    command:
+      - sh
+      - -c
+      - >-
+        alembic upgrade head &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+        --proxy-headers --forwarded-allow-ips '*'
     ports:
       - "8000:8000"
     healthcheck:
@@ -101,3 +105,4 @@ services:
 volumes:
   pgdata:
   uploads:
+  models:
