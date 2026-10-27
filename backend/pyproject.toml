@@ -30,6 +30,7 @@ dependencies = [
   "fastembed>=0.9.1",
   "jinja2>=3.1.6",
   "pyyaml>=6.0.3",
+  "python-jobspy>=1.4.1",
 ]
 
 [dependency-groups]
@@ -56,7 +57,7 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "S", "SIM", "ASYNC", "RUF"]
 ignore = ["S101", "B008", "RUF012", "N818"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S105", "S106", "S107", "ASYNC240"]
+"tests/**" = ["S105", "S106", "S107", "ASYNC240", "E501"]
 
 [tool.mypy]
 python_version = "3.12"

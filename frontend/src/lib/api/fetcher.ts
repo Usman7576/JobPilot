@@ -18,6 +18,8 @@ export interface ProblemDetails {
   detail?: string;
   code: string;
   errors?: { loc: (string | number)[]; msg: string; type: string }[];
+  /** Endpoint-specific extras, e.g. `run_id` on a 409 from POST /searches. */
+  [extra: string]: unknown;
 }
 
 export class ApiError extends Error {
@@ -70,6 +72,7 @@ async function toApiError(response: Response): Promise<ApiError> {
     // Non-JSON error (e.g. proxy failure): fall through to the generic problem.
   }
   return new ApiError({
+    ...body,
     title: body.title ?? response.statusText ?? "Request failed",
     status: response.status,
     detail: body.detail,

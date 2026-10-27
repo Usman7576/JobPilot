@@ -12,7 +12,11 @@ celery_app = Celery(
     "jobpilot",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.tasks.maintenance_tasks", "app.tasks.resume_tasks"],
+    include=[
+        "app.tasks.maintenance_tasks",
+        "app.tasks.resume_tasks",
+        "app.tasks.search_tasks",
+    ],
 )
 
 celery_app.conf.update(

@@ -70,6 +70,20 @@ class Settings(BaseSettings):
     max_upload_mb: int = 5
     max_resume_pages: int = 10
 
+    # --- Job sources ---
+    adzuna_app_id: str = ""
+    adzuna_app_key: str = ""
+    adzuna_default_country: str = "us"
+    jooble_api_key: str = ""
+    serpapi_key: str = ""
+    jobspy_proxies: CsvList = Field(default_factory=list)
+    jobspy_fetch_description: bool = False
+    jobspy_country_indeed: str = "usa"
+    source_max_queries_per_run: int = 6
+    source_timeout_seconds: int = 30
+    normalize_with_llm: bool = False
+    job_ttl_days: int = 30
+
     # --- Celery ---
     celery_task_always_eager: bool = False
 
@@ -82,7 +96,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_json: bool = False
 
-    @field_validator("encryption_keys", mode="before")
+    @field_validator("encryption_keys", "jobspy_proxies", mode="before")
     @classmethod
     def _split_keys(cls, v: object) -> object:
         if isinstance(v, str):

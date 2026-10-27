@@ -1,10 +1,12 @@
 "use client";
 
-import { Check, SlidersHorizontal } from "lucide-react";
+import { Check, PartyPopper } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { EmptyState } from "@/components/common/empty-state";
+import { PreferencesForm } from "@/components/preferences/preferences-form";
 import { ParseStatus } from "@/components/resume/parse-status";
 import { ProfileEditor } from "@/components/resume/profile-editor";
 import { ResumeDropzone } from "@/components/resume/resume-dropzone";
@@ -15,6 +17,7 @@ import {
   useResumesGetActiveResume,
   useResumesListResumes,
 } from "@/lib/api/generated/resumes/resumes";
+import { useSearchesStartSearch } from "@/lib/api/generated/searches/searches";
 import { useUsersGetMe } from "@/lib/api/generated/users/users";
 import { cn } from "@/lib/utils";
 
@@ -114,6 +117,26 @@ function ProfileStep() {
   );
 }
 
+function PreferencesStep() {
+  const router = useRouter();
+  const start = useSearchesStartSearch();
+  return (
+    <div className="grid gap-4">
+      <p className="text-muted-foreground text-sm">
+        We suggested titles from your resume. Adjust them, pick where you want to work, and choose
+        your job sources. Saving starts your first search.
+      </p>
+      <PreferencesForm
+        submitLabel="Save and find jobs"
+        onSaved={() =>
+          // Start the first search, then show it running on the jobs page.
+          start.mutate(undefined, { onSettled: () => router.push("/jobs") })
+        }
+      />
+    </div>
+  );
+}
+
 export function OnboardingFlow() {
   const me = useUsersGetMe();
   if (!me.data) return <Skeleton className="h-64 w-full rounded-xl" />;
@@ -124,14 +147,15 @@ export function OnboardingFlow() {
       <Stepper current={step} />
       {step === "resume" && <UploadStep />}
       {step === "profile" && <ProfileStep />}
-      {(step === "preferences" || step === "integrations" || step === "done") && (
+      {step === "preferences" && <PreferencesStep />}
+      {(step === "integrations" || step === "done") && (
         <EmptyState
-          icon={SlidersHorizontal}
-          title="Your profile is ready"
-          description="Job preferences (titles, locations, remote, salary) arrive in Phase 3. You can keep refining your profile meanwhile."
+          icon={PartyPopper}
+          title="You're all set"
+          description="Your profile and preferences are saved. Gmail and Google Sheets connections arrive in a later phase."
           action={
-            <Button asChild variant="outline">
-              <Link href="/profile">Edit profile</Link>
+            <Button asChild>
+              <Link href="/jobs">Go to your jobs</Link>
             </Button>
           }
         />
