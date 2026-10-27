@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import httpx
 from google import genai
 from google.genai import errors, types
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential_jitter
@@ -17,9 +18,15 @@ from app.providers.llm.base import (
     LLMResult,
 )
 
+REQUEST_TIMEOUT_MS = 90_000
+
 
 class _Transient(Exception):
     pass
+
+
+class _Overloaded(LLMError):
+    """The model kept answering 5xx after retries."""
 
 
 class GeminiProvider:
@@ -30,7 +37,11 @@ class GeminiProvider:
             raise LLMNotConfigured(
                 "GEMINI_API_KEY is not set. Create a free key at https://aistudio.google.com/apikey"
             )
-        self._client = genai.Client(api_key=api_key)
+        # A request stuck in an overloaded model's queue fails after this and is retried,
+        # then moved to the lighter model, instead of holding a worker for minutes.
+        self._client = genai.Client(
+            api_key=api_key, http_options=types.HttpOptions(timeout=REQUEST_TIMEOUT_MS)
+        )
         self._models: dict[ModelTier, str] = {"smart": smart_model, "fast": fast_model}
 
     def generate_json(
@@ -52,7 +63,15 @@ class GeminiProvider:
             response_mime_type="application/json",
             response_json_schema=schema,
         )
-        response = self._call(model, user, config)
+        try:
+            response = self._call(model, user, config)
+        except _Overloaded:
+            # Busy models answer 503 for a while; the lighter model usually still has room.
+            fallback = self._models["fast"]
+            if fallback == model:
+                raise LLMError("Gemini is unavailable right now") from None
+            model = fallback
+            response = self._call(model, user, config)
 
         text = response.text or ""
         try:
@@ -82,7 +101,7 @@ class GeminiProvider:
     ) -> types.GenerateContentResponse:
         try:
             return self._client.models.generate_content(model=model, contents=user, config=config)
-        except errors.ServerError as exc:
+        except (errors.ServerError, httpx.TransportError) as exc:
             raise _Transient(str(exc)) from exc
 
     def _call(
@@ -91,7 +110,7 @@ class GeminiProvider:
         try:
             return self._call_with_retry(model, user, config)
         except _Transient as exc:
-            raise LLMError("Gemini is unavailable right now") from exc
+            raise _Overloaded("Gemini is unavailable right now") from exc
         except errors.ClientError as exc:
             if exc.code == 429:
                 message = str(exc).lower()
