@@ -1,0 +1,42 @@
+{
+  "type": "object",
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "job_ref": { "type": "string" },
+          "skills_match": { "type": "integer" },
+          "experience_match": { "type": "integer" },
+          "seniority_fit": { "type": "integer" },
+          "domain_relevance": { "type": "integer" },
+          "matched_skills": { "type": "array", "items": { "type": "string" } },
+          "missing_skills": { "type": "array", "items": { "type": "string" } },
+          "red_flags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": { "type": "string" },
+                "message": { "type": "string" },
+                "severity": { "type": "string", "enum": ["low", "medium", "high"] }
+              },
+              "required": ["code", "message", "severity"]
+            }
+          },
+          "why_good_fit": { "type": "string" },
+          "apply_recommendation": {
+            "type": "string",
+            "enum": ["strong_apply", "apply", "stretch", "skip"]
+          }
+        },
+        "required": [
+          "job_ref", "skills_match", "experience_match", "seniority_fit", "domain_relevance",
+          "matched_skills", "missing_skills", "red_flags", "why_good_fit", "apply_recommendation"
+        ]
+      }
+    }
+  },
+  "required": ["results"]
+}

@@ -56,6 +56,15 @@ def reserve_request() -> None:
             raise LLMRateLimited("Too many AI requests this minute")
 
 
+def requests_left_today() -> int | None:
+    """Free-tier requests left today on this app's key (None when there's no daily limit)."""
+    settings = get_settings()
+    if not settings.llm_rpd:
+        return None
+    used = _redis().get(f"llm:rpd:{datetime.now(UTC):%Y%m%d}")
+    return max(0, settings.llm_rpd - int(used or 0))  # type: ignore[arg-type]
+
+
 def generate[T](
     session: Session,
     *,

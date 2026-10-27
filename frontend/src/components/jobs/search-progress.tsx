@@ -69,8 +69,11 @@ export function SearchProgress({ runId, onDone }: { runId: string; onDone: () =>
       ? "Search cancelled"
       : data.status === "failed"
         ? "Search failed"
-        : `Found ${data.counts.new_for_you ?? 0} new job${data.counts.new_for_you === 1 ? "" : "s"}`
+        : `Found ${data.counts.new_for_you ?? 0} new ${data.kind === "internships" ? "internship" : "job"}${data.counts.new_for_you === 1 ? "" : "s"}`
     : (data.stage_detail ?? "Searching…");
+  // A finished run can carry a note, e.g. "Done. The AI's free daily limit is used up."
+  const note =
+    finished && data.stage_detail?.startsWith("Done. ") ? data.stage_detail.slice(6) : null;
 
   return (
     <div className="grid gap-3 rounded-xl border p-4" aria-live="polite">
@@ -90,7 +93,9 @@ export function SearchProgress({ runId, onDone }: { runId: string; onDone: () =>
             <p className="text-muted-foreground text-xs">
               {data.counts.scraped ?? 0} results · {data.counts.new ?? 0} new postings ·{" "}
               {data.counts.duplicates ?? 0} duplicates merged
+              {data.counts.scored ? ` · ${data.counts.scored} scored by AI` : ""}
             </p>
+            {note && <p className="text-xs text-amber-700 dark:text-amber-400">{note}</p>}
           </div>
         </div>
         {finished ? (

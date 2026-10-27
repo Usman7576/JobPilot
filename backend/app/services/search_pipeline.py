@@ -23,7 +23,7 @@ from app.models import Job, SearchRun, SearchRunSource, UserJob
 from app.models.enums import EmploymentType, SearchKind, SearchStatus, SourceRunStatus
 from app.providers.embeddings import get_embeddings
 from app.providers.sources import SourceError, SourceQuery, all_sources
-from app.services import job_store, source_guard
+from app.services import job_store, matching, source_guard
 
 log = get_logger(__name__)
 EMBED_BATCH = 32
@@ -126,7 +126,7 @@ def run_search(session: Session, run_id: uuid.UUID) -> SearchStatus | None:
             session.commit()
             _scrape_source(session, run, row, source, queries, counts)
         row.duration_ms = int((time.monotonic() - started) * 1000)
-        run.progress = 2 + int(78 * (index + 1) / max(1, len(rows)))
+        run.progress = 2 + int(68 * (index + 1) / max(1, len(rows)))
         run.counts = dict(counts)
         session.commit()
 
@@ -135,9 +135,11 @@ def run_search(session: Session, run_id: uuid.UUID) -> SearchStatus | None:
         run.stage_detail = "Preparing jobs for matching"
         session.commit()
         _embed_new_jobs(session, run)
-        run.status = _final_status(rows)
-        run.progress = 100
-        run.stage_detail = "Done"
+        note = None if _cancelled(session, run) else _match(session, run, counts)
+        if not _cancelled(session, run):
+            run.status = _final_status(rows)
+            run.progress = 100
+            run.stage_detail = f"Done. {note}" if note else "Done"
     run.counts = dict(counts)
     run.finished_at = datetime.now(UTC)
     session.commit()
@@ -226,9 +228,42 @@ def _embed_new_jobs(session: Session, run: SearchRun) -> None:
         for job, vector in zip(batch, vectors, strict=True):
             job.embedding = vector
             job.embedding_model = provider.model_name
-        run.progress = 80 + int(20 * min(1.0, (start + len(batch)) / len(jobs)))
+        run.progress = 70 + int(10 * min(1.0, (start + len(batch)) / len(jobs)))
         run.stage_detail = f"Preparing jobs for matching ({start + len(batch)}/{len(jobs)})"
         session.commit()
+
+
+def _match(session: Session, run: SearchRun, counts: dict[str, int]) -> str | None:
+    """Rank the user's jobs against their resume. A matching problem never fails the run."""
+    run.status = SearchStatus.MATCHING_STAGE1
+    run.stage_detail = "Ranking jobs against your resume"
+    run.progress = 82
+    session.commit()
+
+    def on_stage2(total: int) -> None:
+        if _cancelled(session, run):
+            return
+        run.status = SearchStatus.SCORING
+        run.stage_detail = f"Scoring your {total} best matches" if total else "Nothing new to score"
+        run.progress = 85
+        session.commit()
+
+    def progress(done: int, total: int) -> None:
+        run.progress = 85 + int(15 * done / total)
+        run.stage_detail = f"Scoring your best matches ({done}/{total})"
+        session.commit()
+
+    try:
+        stats = matching.match_for_user(
+            session, run.user_id, progress=progress, on_stage2=on_stage2
+        )
+    except Exception as exc:
+        session.rollback()
+        log.exception("matching_crashed", run_id=str(run.id), error_type=type(exc).__name__)
+        return "Match scores couldn't be computed this time."
+    counts["filtered_out"] = stats.filtered_out
+    counts["scored"] = stats.scored
+    return stats.stopped
 
 
 def _final_status(rows: list[SearchRunSource]) -> SearchStatus:

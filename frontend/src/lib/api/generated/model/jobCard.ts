@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { EmploymentType } from './employmentType';
+import type { MatchSummary } from './matchSummary';
 import type { PayStatus } from './payStatus';
 import type { RemoteType } from './remoteType';
 import type { SalaryPeriod } from './salaryPeriod';
@@ -33,4 +34,5 @@ export interface JobCard {
   apply_url: string | null;
   has_contact_email: boolean;
   dismissed: boolean;
+  match: MatchSummary | null;
 }

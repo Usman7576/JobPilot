@@ -16,17 +16,18 @@ from app.providers.llm.base import (
     LLMQuotaExhausted,
     LLMRateLimited,
     LLMResult,
+    LLMUnavailable,
 )
 
 REQUEST_TIMEOUT_MS = 90_000
 
 
 class _Transient(Exception):
-    pass
+    """A 5xx answer: worth one quick retry on the same model."""
 
 
-class _Overloaded(LLMError):
-    """The model kept answering 5xx after retries."""
+class _Overloaded(LLMUnavailable):
+    """The model is overloaded (5xx after a retry) or too slow (timeout)."""
 
 
 class GeminiProvider:
@@ -37,10 +38,16 @@ class GeminiProvider:
             raise LLMNotConfigured(
                 "GEMINI_API_KEY is not set. Create a free key at https://aistudio.google.com/apikey"
             )
-        # A request stuck in an overloaded model's queue fails after this and is retried,
-        # then moved to the lighter model, instead of holding a worker for minutes.
+        # A request stuck in an overloaded model's queue fails after this and moves to the
+        # lighter model instead of holding a worker for minutes.
         self._client = genai.Client(
-            api_key=api_key, http_options=types.HttpOptions(timeout=REQUEST_TIMEOUT_MS)
+            api_key=api_key,
+            http_options=types.HttpOptions(
+                timeout=REQUEST_TIMEOUT_MS,
+                # The SDK's own retries (5 attempts, up to 60 s apart) would stack on ours
+                # and keep a worker busy for many minutes while Gemini is overloaded.
+                retry_options=types.HttpRetryOptions(attempts=1),
+            ),
         )
         self._models: dict[ModelTier, str] = {"smart": smart_model, "fast": fast_model}
 
@@ -69,7 +76,7 @@ class GeminiProvider:
             # Busy models answer 503 for a while; the lighter model usually still has room.
             fallback = self._models["fast"]
             if fallback == model:
-                raise LLMError("Gemini is unavailable right now") from None
+                raise
             model = fallback
             response = self._call(model, user, config)
 
@@ -92,8 +99,8 @@ class GeminiProvider:
 
     @retry(
         retry=retry_if_exception_type(_Transient),
-        stop=stop_after_attempt(3),
-        wait=wait_exponential_jitter(initial=2, max=20),
+        stop=stop_after_attempt(2),
+        wait=wait_exponential_jitter(initial=2, max=8),
         reraise=True,
     )
     def _call_with_retry(
@@ -101,7 +108,12 @@ class GeminiProvider:
     ) -> types.GenerateContentResponse:
         try:
             return self._client.models.generate_content(model=model, contents=user, config=config)
-        except (errors.ServerError, httpx.TransportError) as exc:
+        except errors.ServerError as exc:
+            raise _Transient(str(exc)) from exc
+        except httpx.TimeoutException as exc:
+            # Already waited the full timeout: retrying the same model just doubles the wait.
+            raise _Overloaded("Gemini took too long to answer") from exc
+        except httpx.TransportError as exc:
             raise _Transient(str(exc)) from exc
 
     def _call(

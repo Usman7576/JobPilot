@@ -6,8 +6,9 @@ from typing import Literal
 
 from app.models.enums import EmploymentType, PayStatus, RemoteType, SalaryPeriod, Seniority
 from app.schemas.common import ApiModel
+from app.schemas.match import MatchDetail, MatchSummary
 
-JobSort = Literal["posted", "discovered"]
+JobSort = Literal["score", "posted", "discovered"]
 
 
 class JobSourceLink(ApiModel):
@@ -39,15 +40,19 @@ class JobCard(ApiModel):
     apply_url: str | None
     has_contact_email: bool
     dismissed: bool
+    match: MatchSummary | None
 
 
 class JobDetail(JobCard):
     description_text: str | None
     contact_emails: list[str]
     source_links: list[JobSourceLink]
+    match: MatchDetail | None
 
 
 class JobPage(ApiModel):
     items: list[JobCard]
     total: int
     has_more: bool
+    filtered_out: int  # jobs hidden by your filters (shown with include_filtered)
+    has_resume: bool  # False: no active resume yet, so nothing is scored

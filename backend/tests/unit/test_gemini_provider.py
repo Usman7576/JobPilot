@@ -8,7 +8,7 @@ import pytest
 from google.genai import errors
 
 from app.prompts.registry import load_prompt, render
-from app.providers.llm import LLMError
+from app.providers.llm import LLMUnavailable
 from app.providers.llm import gemini as gemini_module
 from app.providers.llm.gemini import GeminiProvider
 
@@ -54,12 +54,12 @@ def test_busy_smart_model_falls_back_to_fast_model() -> None:
     result = provider.generate_json(_prompt(), schema={}, tier="smart")
     assert result.model == "fast-model"
     assert result.data == {"ok": True}
-    assert models.calls == ["smart-model"] * 3 + ["fast-model"]
+    assert models.calls == ["smart-model"] * 2 + ["fast-model"]  # one quick retry, then fall back
 
 
 def test_both_models_busy_raises_llm_error() -> None:
     provider, _ = _provider(busy={"smart-model", "fast-model"})
-    with pytest.raises(LLMError, match="unavailable"):
+    with pytest.raises(LLMUnavailable, match="unavailable"):
         provider.generate_json(_prompt(), schema={}, tier="smart")
 
 
@@ -67,4 +67,4 @@ def test_timed_out_smart_model_falls_back_to_fast_model() -> None:
     provider, models = _provider(slow={"smart-model"})
     result = provider.generate_json(_prompt(), schema={}, tier="smart")
     assert result.model == "fast-model"
-    assert models.calls == ["smart-model"] * 3 + ["fast-model"]
+    assert models.calls == ["smart-model", "fast-model"]  # a timeout isn't retried

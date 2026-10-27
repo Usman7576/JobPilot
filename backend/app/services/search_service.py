@@ -2,22 +2,66 @@
 
 from __future__ import annotations
 
+import math
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.errors import AppError, Conflict, NotFound, ServiceUnavailable
 from app.core.logging import get_logger
-from app.models import Preference, SearchRun, SearchRunSource, User
-from app.models.enums import SearchKind, SearchStatus, SearchTrigger, SourceRunStatus
+from app.models import JobMatch, Preference, SearchRun, SearchRunSource, User, UserJob
+from app.models.enums import MatchStage, SearchKind, SearchStatus, SearchTrigger, SourceRunStatus
 from app.providers.sources import all_sources
+from app.schemas.match import ScoreEstimate
 from app.schemas.search import SearchRunOut, SearchRunSourceOut
+from app.services import job_service, llm_gateway, matching
 from app.services.search_pipeline import ACTIVE_STATUSES
 
 log = get_logger(__name__)
 STALE_AFTER = timedelta(minutes=30)
+
+
+async def estimate(db: AsyncSession, user: User) -> ScoreEstimate:
+    """AI requests the next scoring pass would use (5 jobs per request, best N only)."""
+    key = await job_service.active_resume_key(db, user)
+    left = llm_gateway.requests_left_today()
+    if key is None:
+        return ScoreEstimate(
+            jobs_to_score=0, llm_requests=0, requests_left_today=left, has_resume=False
+        )
+    resume_id, version = key
+    current = and_(
+        JobMatch.job_id == UserJob.job_id,
+        JobMatch.resume_id == resume_id,
+        JobMatch.profile_version == version,
+    )
+    unscored = await db.scalar(
+        select(func.count())
+        .select_from(UserJob)
+        .outerjoin(JobMatch, current)
+        .where(
+            UserJob.user_id == user.id,
+            UserJob.dismissed_at.is_(None),
+            or_(
+                JobMatch.id.is_(None),
+                and_(JobMatch.hard_filter_passed.is_(True), JobMatch.stage != MatchStage.SCORED),
+            ),
+        )
+    )
+    pref = await db.get(Preference, user.id)
+    top_n = (
+        pref.stage1_top_n if pref and pref.stage1_top_n else None
+    ) or get_settings().stage1_top_n
+    jobs = min(int(unscored or 0), top_n)
+    return ScoreEstimate(
+        jobs_to_score=jobs,
+        llm_requests=math.ceil(jobs / matching.BATCH),
+        requests_left_today=left,
+        has_resume=True,
+    )
 
 
 class SearchNotReady(AppError):

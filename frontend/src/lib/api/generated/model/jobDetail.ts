@@ -6,6 +6,7 @@
  */
 import type { EmploymentType } from './employmentType';
 import type { JobSourceLink } from './jobSourceLink';
+import type { MatchDetail } from './matchDetail';
 import type { PayStatus } from './payStatus';
 import type { RemoteType } from './remoteType';
 import type { SalaryPeriod } from './salaryPeriod';
@@ -34,6 +35,7 @@ export interface JobDetail {
   apply_url: string | null;
   has_contact_email: boolean;
   dismissed: boolean;
+  match: MatchDetail | null;
   description_text: string | null;
   contact_emails: string[];
   source_links: JobSourceLink[];

@@ -82,6 +82,8 @@ class Settings(BaseSettings):
     source_max_queries_per_run: int = 6
     source_timeout_seconds: int = 30
     normalize_with_llm: bool = False
+    # How many of the best-matching unscored jobs the AI scores per search (5 per request).
+    stage1_top_n: int = 15
     job_ttl_days: int = 30
 
     # --- Celery ---

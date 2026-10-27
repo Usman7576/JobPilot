@@ -20,7 +20,13 @@ import {
   useJobsListJobs,
   useJobsUndismissJob,
 } from "@/lib/api/generated/jobs/jobs";
-import type { PayStatus, RemoteType, SearchKind } from "@/lib/api/generated/model";
+import type {
+  JobsListJobsSort,
+  PayStatus,
+  Recommendation,
+  RemoteType,
+  SearchKind,
+} from "@/lib/api/generated/model";
 import {
   usePreferencesGetPreferences,
   usePreferencesListSources,
@@ -61,6 +67,9 @@ export function JobsView() {
   const [runId, setRunId] = useState<string | null>(null);
   const [kind, setKind] = useState<SearchKind>("jobs");
   const [pay, setPay] = useState<PayStatus | "">("");
+  const [sort, setSort] = useState<JobsListJobsSort>("score");
+  const [fit, setFit] = useState<Recommendation | "">("");
+  const [showFiltered, setShowFiltered] = useState(false);
   const [q, setQ] = useState("");
   const [source, setSource] = useState("");
   const [remote, setRemote] = useState<RemoteType | "">("");
@@ -73,6 +82,9 @@ export function JobsView() {
   const jobs = useJobsListJobs({
     kind,
     pay: (internships && pay) || undefined,
+    sort,
+    recommendation: fit || undefined,
+    include_filtered: showFiltered || undefined,
     q: query || undefined,
     source: source || undefined,
     remote_type: remote || undefined,
@@ -120,13 +132,13 @@ export function JobsView() {
 
   const needsPrefs = prefs.data && (!prefs.data.is_saved || !prefs.data.target_titles?.length);
   const searching = Boolean(shownRun && active.data?.is_active);
-  const filtered = Boolean(q || source || remote || (internships && pay));
+  const filtered = Boolean(q || source || remote || fit || (internships && pay));
 
   return (
     <>
       <PageHeader
         title="Jobs"
-        description="Fresh jobs and internships from your sources. Match scores arrive in the next phase."
+        description="Jobs and internships from your sources, ranked by how well they fit your resume."
         actions={
           <Button onClick={findJobs} disabled={start.isPending || searching || Boolean(needsPrefs)}>
             <Search className="size-4" /> {searching ? "Searching…" : `Find ${noun}`}
@@ -232,13 +244,61 @@ export function JobsView() {
                 <option value="unknown">Pay not stated</option>
               </select>
             )}
+            <select
+              aria-label="Fit"
+              className={selectClass}
+              value={fit}
+              onChange={(e) => {
+                setFit(e.target.value as Recommendation | "");
+                setLimit(PAGE);
+              }}
+            >
+              <option value="">Any fit</option>
+              <option value="strong_apply">Strong matches</option>
+              <option value="apply">Good matches</option>
+              <option value="stretch">Stretches</option>
+              <option value="skip">Weak matches</option>
+            </select>
+            <select
+              aria-label="Sort"
+              className={selectClass}
+              value={sort}
+              onChange={(e) => setSort(e.target.value as JobsListJobsSort)}
+            >
+              <option value="score">Best match</option>
+              <option value="posted">Newest</option>
+              <option value="discovered">Recently found</option>
+            </select>
             {jobs.data && (
               <span className="text-muted-foreground self-center text-sm">
                 {jobs.data.total} {noun}
+                {jobs.data.filtered_out > 0 && (
+                  <>
+                    {" · "}
+                    <button
+                      type="button"
+                      className="hover:text-foreground underline underline-offset-2"
+                      onClick={() => setShowFiltered((v) => !v)}
+                    >
+                      {showFiltered
+                        ? "hide filtered"
+                        : `${jobs.data.filtered_out} hidden by your filters`}
+                    </button>
+                  </>
+                )}
               </span>
             )}
           </div>
 
+          {jobs.data && !jobs.data.has_resume && (
+            <div className="bg-muted mb-4 rounded-md p-3 text-sm">
+              Match scores need your resume.{" "}
+              <Link href="/profile" className="font-medium underline underline-offset-2">
+                Upload it on your Profile
+              </Link>{" "}
+              and your jobs will be ranked.
+            </div>
+          )}
           {jobs.isPending ? (
             <div className="grid gap-3">
               {Array.from({ length: 4 }, (_, i) => (

@@ -3,20 +3,64 @@
 import { ArrowLeft, Building2, Clock, ExternalLink, Mail, MapPin, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { EmptyState } from "@/components/common/empty-state";
 import { PayBadge } from "@/components/jobs/job-card";
+import { MatchPanel, ScoreBadge } from "@/components/jobs/match";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/fetcher";
-import { useJobsGetJob } from "@/lib/api/generated/jobs/jobs";
+import { useJobsGetJob, useJobsRescoreJob } from "@/lib/api/generated/jobs/jobs";
+import { useResumesGetActiveResume } from "@/lib/api/generated/resumes/resumes";
 import { formatSalary, REMOTE_LABEL, timeAgo } from "@/lib/format";
+import { errorMessage } from "@/lib/forms";
+
+const RESCORE_TIMEOUT_MS = 90_000;
 
 export function JobDetailView() {
   const { id } = useParams<{ id: string }>();
-  const job = useJobsGetJob(id);
+  // While a rescore runs, poll until the match's scored_at changes (or give up).
+  const [waitingSince, setWaitingSince] = useState<{ at: number; scoredAt: string | null } | null>(
+    null,
+  );
+  const job = useJobsGetJob(id, {
+    query: {
+      refetchInterval: (q) =>
+        waitingSince && (q.state.data?.match?.scored_at ?? null) === waitingSince.scoredAt
+          ? 3000
+          : false,
+    },
+  });
+  const resume = useResumesGetActiveResume();
+  const rescore = useJobsRescoreJob();
+  const scoredAt = job.data?.match?.scored_at ?? null;
+  const waiting = Boolean(waitingSince && scoredAt === waitingSince.scoredAt);
+
+  useEffect(() => {
+    if (!waiting || !waitingSince) return;
+    const left = RESCORE_TIMEOUT_MS - (Date.now() - waitingSince.at);
+    const t = setTimeout(
+      () => {
+        setWaitingSince(null);
+        toast("Still scoring. Check back in a minute.");
+      },
+      Math.max(0, left),
+    );
+    return () => clearTimeout(t);
+  }, [waiting, waitingSince]);
+
+  const startRescore = () =>
+    rescore.mutate(
+      { jobId: id },
+      {
+        onSuccess: () => setWaitingSince({ at: Date.now(), scoredAt }),
+        onError: (e) => toast.error(errorMessage(e)),
+      },
+    );
 
   if (job.error instanceof ApiError && job.error.status === 404) {
     return (
@@ -49,7 +93,10 @@ export function JobDetailView() {
       </Link>
 
       <header className="grid gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">{j.title}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">{j.title}</h1>
+          <ScoreBadge match={j.match} />
+        </div>
         <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-sm">
           <span className="flex items-center gap-1">
             <Building2 className="size-4" /> {j.company_name}
@@ -93,7 +140,7 @@ export function JobDetailView() {
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Description</CardTitle>
@@ -112,6 +159,12 @@ export function JobDetailView() {
         </Card>
 
         <aside className="grid content-start gap-4">
+          <MatchPanel
+            match={j.match}
+            hasResume={resume.data?.status === "parsed"}
+            rescoring={rescore.isPending || waiting}
+            onRescore={startRescore}
+          />
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Skills mentioned</CardTitle>

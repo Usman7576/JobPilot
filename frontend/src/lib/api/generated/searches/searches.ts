@@ -25,6 +25,7 @@ import type {
 
 import type {
   HTTPValidationError,
+  ScoreEstimate,
   SearchRunOut,
   SearchStartIn,
   SearchesListSearchesParams
@@ -237,6 +238,107 @@ export function useSearchesListSearches<TData = Awaited<ReturnType<typeof search
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getSearchesListSearchesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getSearchesEstimateScoringUrl = () => {
+
+
+
+
+  return `/api/v1/searches/estimate`
+}
+
+/**
+ * How many AI requests scoring your unscored jobs would take, and how many are left.
+ * @summary Estimate Scoring
+ */
+export const searchesEstimateScoring = async ( options?: Parameters<typeof customFetch>[1]): Promise<ScoreEstimate> => {
+
+  return customFetch<ScoreEstimate>(getSearchesEstimateScoringUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchesEstimateScoringQueryKey = () => {
+    return [
+    `/api/v1/searches/estimate`
+    ] as const;
+    }
+
+
+export const getSearchesEstimateScoringQueryOptions = <TData = Awaited<ReturnType<typeof searchesEstimateScoring>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchesEstimateScoring>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchesEstimateScoringQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchesEstimateScoring>>> = ({ signal }) => searchesEstimateScoring({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchesEstimateScoring>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type SearchesEstimateScoringQueryResult = NonNullable<Awaited<ReturnType<typeof searchesEstimateScoring>>>
+export type SearchesEstimateScoringQueryError = ErrorType<unknown>
+
+
+export function useSearchesEstimateScoring<TData = Awaited<ReturnType<typeof searchesEstimateScoring>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchesEstimateScoring>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchesEstimateScoring>>,
+          TError,
+          Awaited<ReturnType<typeof searchesEstimateScoring>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSearchesEstimateScoring<TData = Awaited<ReturnType<typeof searchesEstimateScoring>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchesEstimateScoring>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchesEstimateScoring>>,
+          TError,
+          Awaited<ReturnType<typeof searchesEstimateScoring>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useSearchesEstimateScoring<TData = Awaited<ReturnType<typeof searchesEstimateScoring>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchesEstimateScoring>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Estimate Scoring
+ */
+
+export function useSearchesEstimateScoring<TData = Awaited<ReturnType<typeof searchesEstimateScoring>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchesEstimateScoring>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getSearchesEstimateScoringQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

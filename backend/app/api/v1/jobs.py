@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 
 from app.core.deps import CurrentUser, DbSession
-from app.models.enums import PayStatus, RemoteType, SearchKind
+from app.core.ratelimit import limiter
+from app.models.enums import PayStatus, Recommendation, RemoteType, SearchKind
 from app.schemas.job import JobDetail, JobPage, JobSort
 from app.services import job_service
 
@@ -22,8 +23,11 @@ async def list_jobs(
     source: str | None = Query(default=None, max_length=40),
     remote_type: RemoteType | None = None,
     posted_within_days: int | None = Query(default=None, ge=1, le=90),
+    min_score: int | None = Query(default=None, ge=0, le=100),
+    recommendation: Recommendation | None = None,
+    include_filtered: bool = False,
     include_dismissed: bool = False,
-    sort: JobSort = "posted",
+    sort: JobSort = "score",
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
 ) -> JobPage:
@@ -36,6 +40,9 @@ async def list_jobs(
         source=source,
         remote_type=remote_type,
         posted_within_days=posted_within_days,
+        min_score=min_score,
+        recommendation=recommendation,
+        include_filtered=include_filtered,
         include_dismissed=include_dismissed,
         sort=sort,
         limit=limit,
@@ -56,3 +63,12 @@ async def dismiss_job(job_id: uuid.UUID, user: CurrentUser, db: DbSession) -> No
 @router.post("/{job_id}/undismiss", status_code=status.HTTP_204_NO_CONTENT)
 async def undismiss_job(job_id: uuid.UUID, user: CurrentUser, db: DbSession) -> None:
     await job_service.set_dismissed(db, user, job_id, False)
+
+
+@router.post("/{job_id}/rescore", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("20/hour")
+async def rescore_job(
+    request: Request, job_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> None:
+    """Score this job again against your current resume (uses one AI request)."""
+    await job_service.rescore(db, user, job_id)

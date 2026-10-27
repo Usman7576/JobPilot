@@ -406,3 +406,77 @@ export const useJobsUndismissJob = <TError = ErrorType<HTTPValidationError>,
       > => {
       return useMutation(getJobsUndismissJobMutationOptions(options), queryClient);
     }
+    export const getJobsRescoreJobUrl = (jobId: string,) => {
+
+
+
+
+  return `/api/v1/jobs/${jobId}/rescore`
+}
+
+/**
+ * Score this job again against your current resume (uses one AI request).
+ * @summary Rescore Job
+ */
+export const jobsRescoreJob = async (jobId: string, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getJobsRescoreJobUrl(jobId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getJobsRescoreJobMutationKey = () => ['jobsRescoreJob'] as const;
+
+export const getJobsRescoreJobMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof jobsRescoreJob>>, TError,JobsRescoreJobMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof jobsRescoreJob>>, TError,JobsRescoreJobMutationVariables, TContext> => {
+
+const mutationKey = getJobsRescoreJobMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof jobsRescoreJob>>, JobsRescoreJobMutationVariables> = (props) => {
+          const {jobId} = props ?? {};
+
+          return  jobsRescoreJob(jobId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type JobsRescoreJobMutationResult = NonNullable<Awaited<ReturnType<typeof jobsRescoreJob>>>
+
+    export type JobsRescoreJobMutationError = ErrorType<HTTPValidationError>
+    export type JobsRescoreJobMutationVariables = {jobId: string}
+
+    /**
+ * @summary Rescore Job
+ */
+export const useJobsRescoreJob = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof jobsRescoreJob>>, TError,JobsRescoreJobMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof jobsRescoreJob>>,
+        TError,
+        JobsRescoreJobMutationVariables,
+        TContext
+      > => {
+      return useMutation(getJobsRescoreJobMutationOptions(options), queryClient);
+    }

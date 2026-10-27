@@ -6,6 +6,7 @@ from fastapi import APIRouter, Query, Request, status
 
 from app.core.deps import CurrentUser, DbSession
 from app.core.ratelimit import limiter
+from app.schemas.match import ScoreEstimate
 from app.schemas.search import SearchRunOut, SearchStartIn
 from app.services import search_service
 
@@ -26,6 +27,12 @@ async def list_searches(
     user: CurrentUser, db: DbSession, limit: int = Query(default=5, ge=1, le=20)
 ) -> list[SearchRunOut]:
     return await search_service.recent(db, user, limit)
+
+
+@router.get("/estimate")
+async def estimate_scoring(user: CurrentUser, db: DbSession) -> ScoreEstimate:
+    """How many AI requests scoring your unscored jobs would take, and how many are left."""
+    return await search_service.estimate(db, user)
 
 
 @router.get("/active")

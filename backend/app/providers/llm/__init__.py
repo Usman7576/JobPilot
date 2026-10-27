@@ -9,6 +9,7 @@ from app.providers.llm.base import (
     LLMQuotaExhausted,
     LLMRateLimited,
     LLMResult,
+    LLMUnavailable,
 )
 
 _override: LLMProvider | None = None
@@ -67,6 +68,7 @@ __all__ = [
     "LLMQuotaExhausted",
     "LLMRateLimited",
     "LLMResult",
+    "LLMUnavailable",
     "get_llm",
     "set_llm_override",
 ]

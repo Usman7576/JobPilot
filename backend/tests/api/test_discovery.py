@@ -103,7 +103,14 @@ async def test_search_run_stores_dedupes_and_embeds(
     assert run["progress"] == 100 and run["is_active"] is False
     # Each fake source answers both queries (Berlin + remote) with the same 2-3 jobs, and
     # beta repeats alpha's posting: 10 results -> 4 distinct jobs.
-    assert run["counts"] == {"scraped": 10, "new": 4, "duplicates": 6, "new_for_you": 4}
+    assert run["counts"] == {
+        "scraped": 10,
+        "new": 4,
+        "duplicates": 6,
+        "new_for_you": 4,
+        "filtered_out": 0,  # no resume yet, so nothing is matched
+        "scored": 0,
+    }
     assert [s["status"] for s in run["sources"]] == ["ok", "ok"]
     # Berlin onsite + remote-only = 2 queries per source.
     assert len(sources["alpha"].queries) == 2

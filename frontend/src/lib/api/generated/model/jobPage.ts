@@ -10,4 +10,6 @@ export interface JobPage {
   items: JobCard[];
   total: number;
   has_more: boolean;
+  filtered_out: number;
+  has_resume: boolean;
 }

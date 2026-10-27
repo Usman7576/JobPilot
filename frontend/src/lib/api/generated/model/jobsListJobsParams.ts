@@ -6,6 +6,7 @@
  */
 import type { JobsListJobsSort } from './jobsListJobsSort';
 import type { PayStatus } from './payStatus';
+import type { Recommendation } from './recommendation';
 import type { RemoteType } from './remoteType';
 import type { SearchKind } from './searchKind';
 
@@ -16,6 +17,9 @@ pay?: PayStatus | null;
 source?: string | null;
 remote_type?: RemoteType | null;
 posted_within_days?: number | null;
+min_score?: number | null;
+recommendation?: Recommendation | null;
+include_filtered?: boolean;
 include_dismissed?: boolean;
 sort?: JobsListJobsSort;
 /**

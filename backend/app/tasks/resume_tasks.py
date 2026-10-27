@@ -35,4 +35,11 @@ def parse_resume(self: Any, resume_id: str) -> bool:
 @celery_app.task(autoretry_for=(OSError,), retry_backoff=30, max_retries=3)
 def embed_resume(resume_id: str, profile_version: int) -> bool:
     with sync_session() as session:
-        return resume_pipeline.embed_resume(session, uuid.UUID(resume_id), profile_version)
+        embedded = resume_pipeline.embed_resume(session, uuid.UUID(resume_id), profile_version)
+        resume = session.get(Resume, uuid.UUID(resume_id)) if embedded else None
+        if resume is not None and resume.is_active:
+            # A new profile version gets its own scores; older versions keep theirs.
+            from app.tasks.matching_tasks import match_jobs
+
+            match_jobs.delay(str(resume.user_id))
+        return embedded

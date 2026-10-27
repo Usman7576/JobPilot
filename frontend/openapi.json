@@ -1099,6 +1099,28 @@
         }
       }
     },
+    "/api/v1/searches/estimate": {
+      "get": {
+        "tags": [
+          "searches"
+        ],
+        "summary": "Estimate Scoring",
+        "description": "How many AI requests scoring your unscored jobs would take, and how many are left.",
+        "operationId": "searches_estimate_scoring",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScoreEstimate"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/searches/active": {
       "get": {
         "tags": [
@@ -1323,6 +1345,50 @@
             }
           },
           {
+            "name": "min_score",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 100,
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Score"
+            }
+          },
+          {
+            "name": "recommendation",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Recommendation"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recommendation"
+            }
+          },
+          {
+            "name": "include_filtered",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Filtered"
+            }
+          },
+          {
             "name": "include_dismissed",
             "in": "query",
             "required": false,
@@ -1338,11 +1404,12 @@
             "required": false,
             "schema": {
               "enum": [
+                "score",
                 "posted",
                 "discovered"
               ],
               "type": "string",
-              "default": "posted",
+              "default": "score",
               "title": "Sort"
             }
           },
@@ -1495,6 +1562,48 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/jobs/{job_id}/rescore": {
+      "post": {
+        "tags": [
+          "jobs"
+        ],
+        "summary": "Rescore Job",
+        "description": "Score this job again against your current resume (uses one AI request).",
+        "operationId": "jobs_rescore_job",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -1932,6 +2041,16 @@
           "dismissed": {
             "type": "boolean",
             "title": "Dismissed"
+          },
+          "match": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -1958,7 +2077,8 @@
           "url",
           "apply_url",
           "has_contact_email",
-          "dismissed"
+          "dismissed",
+          "match"
         ],
         "title": "JobCard"
       },
@@ -2126,6 +2246,16 @@
             "type": "boolean",
             "title": "Dismissed"
           },
+          "match": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MatchDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "description_text": {
             "anyOf": [
               {
@@ -2177,6 +2307,7 @@
           "apply_url",
           "has_contact_email",
           "dismissed",
+          "match",
           "description_text",
           "contact_emails",
           "source_links"
@@ -2199,6 +2330,14 @@
           "has_more": {
             "type": "boolean",
             "title": "Has More"
+          },
+          "filtered_out": {
+            "type": "integer",
+            "title": "Filtered Out"
+          },
+          "has_resume": {
+            "type": "boolean",
+            "title": "Has Resume"
           }
         },
         "additionalProperties": false,
@@ -2206,7 +2345,9 @@
         "required": [
           "items",
           "total",
-          "has_more"
+          "has_more",
+          "filtered_out",
+          "has_resume"
         ],
         "title": "JobPage"
       },
@@ -2274,6 +2415,214 @@
           "password"
         ],
         "title": "LoginIn"
+      },
+      "MatchDetail": {
+        "properties": {
+          "stage": {
+            "$ref": "#/components/schemas/MatchStage"
+          },
+          "overall_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Score"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Recommendation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "similarity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Similarity"
+          },
+          "hard_filter_passed": {
+            "type": "boolean",
+            "title": "Hard Filter Passed"
+          },
+          "hard_filter_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Hard Filter Reasons"
+          },
+          "breakdown": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Breakdown"
+          },
+          "matched_skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Matched Skills"
+          },
+          "missing_skills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Skills"
+          },
+          "red_flags": {
+            "items": {
+              "$ref": "#/components/schemas/RedFlagOut"
+            },
+            "type": "array",
+            "title": "Red Flags"
+          },
+          "why_good_fit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Why Good Fit"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "scored_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scored At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stage",
+          "overall_score",
+          "recommendation",
+          "similarity",
+          "hard_filter_passed",
+          "hard_filter_reasons",
+          "breakdown",
+          "matched_skills",
+          "missing_skills",
+          "red_flags",
+          "why_good_fit",
+          "failure_reason",
+          "scored_at"
+        ],
+        "title": "MatchDetail"
+      },
+      "MatchStage": {
+        "type": "string",
+        "enum": [
+          "stage1",
+          "scored",
+          "score_failed"
+        ],
+        "title": "MatchStage"
+      },
+      "MatchSummary": {
+        "properties": {
+          "stage": {
+            "$ref": "#/components/schemas/MatchStage"
+          },
+          "overall_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Score"
+          },
+          "recommendation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Recommendation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "similarity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Similarity"
+          },
+          "hard_filter_passed": {
+            "type": "boolean",
+            "title": "Hard Filter Passed"
+          },
+          "hard_filter_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Hard Filter Reasons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "stage",
+          "overall_score",
+          "recommendation",
+          "similarity",
+          "hard_filter_passed",
+          "hard_filter_reasons"
+        ],
+        "title": "MatchSummary",
+        "description": "What a job card shows about the match."
       },
       "MessageOut": {
         "properties": {
@@ -2696,6 +3045,45 @@
           "name"
         ],
         "title": "Project"
+      },
+      "Recommendation": {
+        "type": "string",
+        "enum": [
+          "strong_apply",
+          "apply",
+          "stretch",
+          "skip"
+        ],
+        "title": "Recommendation"
+      },
+      "RedFlagOut": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Severity"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "severity"
+        ],
+        "title": "RedFlagOut"
       },
       "RemoteType": {
         "type": "string",
@@ -3123,6 +3511,43 @@
           "hour"
         ],
         "title": "SalaryPeriod"
+      },
+      "ScoreEstimate": {
+        "properties": {
+          "jobs_to_score": {
+            "type": "integer",
+            "title": "Jobs To Score"
+          },
+          "llm_requests": {
+            "type": "integer",
+            "title": "Llm Requests"
+          },
+          "requests_left_today": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requests Left Today"
+          },
+          "has_resume": {
+            "type": "boolean",
+            "title": "Has Resume"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "jobs_to_score",
+          "llm_requests",
+          "requests_left_today",
+          "has_resume"
+        ],
+        "title": "ScoreEstimate",
+        "description": "How many AI requests scoring the user's unscored jobs would take right now."
       },
       "SearchKind": {
         "type": "string",

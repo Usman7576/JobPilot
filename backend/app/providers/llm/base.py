@@ -28,6 +28,12 @@ class LLMQuotaExhausted(LLMError):
     code = "llm_quota_exhausted"
 
 
+class LLMUnavailable(LLMError):
+    """The provider is overloaded or unreachable even after retries: try again later."""
+
+    code = "llm_unavailable"
+
+
 class LLMInvalidOutput(LLMError):
     code = "llm_invalid_output"
 

@@ -9,6 +9,7 @@ export type JobsListJobsSort = typeof JobsListJobsSort[keyof typeof JobsListJobs
 
 
 export const JobsListJobsSort = {
+  score: 'score',
   posted: 'posted',
   discovered: 'discovered',
 } as const;

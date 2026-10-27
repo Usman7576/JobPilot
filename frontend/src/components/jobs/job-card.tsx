@@ -3,6 +3,7 @@
 import { Building2, Clock, EyeOff, MapPin, Wallet } from "lucide-react";
 import Link from "next/link";
 
+import { ScoreBadge } from "@/components/jobs/match";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { JobCard as Job, PayStatus } from "@/lib/api/generated/model";
@@ -55,9 +56,12 @@ export function JobCard({ job, onDismiss }: { job: Job; onDismiss: () => void })
             </span>
           </div>
         </div>
-        <Button variant="ghost" size="icon" aria-label="Hide this job" onClick={onDismiss}>
-          <EyeOff className="size-4" />
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <ScoreBadge match={job.match} />
+          <Button variant="ghost" size="icon" aria-label="Hide this job" onClick={onDismiss}>
+            <EyeOff className="size-4" />
+          </Button>
+        </div>
       </div>
       {job.snippet && <p className="text-muted-foreground line-clamp-2 text-sm">{job.snippet}</p>}
       <div className="flex flex-wrap items-center gap-1.5">

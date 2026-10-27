@@ -117,6 +117,17 @@ def _enqueue_embed(resume_id: uuid.UUID, profile_version: int) -> None:
         log.error("enqueue_failed", task="embed_resume", error_type=type(exc).__name__)
 
 
+def enqueue_match(user_id: uuid.UUID, job_ids: list[uuid.UUID] | None = None) -> bool:
+    from app.tasks.matching_tasks import match_jobs
+
+    try:
+        match_jobs.delay(str(user_id), [str(j) for j in job_ids] if job_ids else None)
+    except Exception as exc:
+        log.error("enqueue_failed", task="match_jobs", error_type=type(exc).__name__)
+        return False
+    return True
+
+
 async def upload(db: AsyncSession, user: User, *, filename: str | None, data: bytes) -> Resume:
     settings = get_settings()
     if len(data) > settings.max_upload_mb * 1024 * 1024:
@@ -210,6 +221,8 @@ async def activate(db: AsyncSession, user: User, resume: Resume) -> Resume:
     resume.is_active = True
     await db.commit()
     await db.refresh(resume)
+    if resume.embedding is not None:
+        enqueue_match(user.id)  # this version's scores (cached ones are reused)
     return resume
 
 
