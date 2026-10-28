@@ -128,3 +128,272 @@
     @apply font-sans;
   }
 }
+
+/* --- Landing page --------------------------------------------------------------------------- */
+/* Colors and motion for the public homepage only (scoped under .landing). */
+
+.landing {
+  --lp-a: oklch(0.56 0.23 285); /* violet */
+  --lp-b: oklch(0.62 0.17 235); /* sky */
+  --lp-c: oklch(0.62 0.16 160); /* emerald */
+  --lp-warn: oklch(0.7 0.16 70); /* amber */
+  --lp-bad: oklch(0.58 0.22 25); /* red */
+  --lp-glow: 0.28;
+}
+.dark .landing {
+  --lp-a: oklch(0.7 0.19 285);
+  --lp-b: oklch(0.76 0.13 230);
+  --lp-c: oklch(0.78 0.15 160);
+  --lp-warn: oklch(0.8 0.15 75);
+  --lp-bad: oklch(0.7 0.19 25);
+  --lp-glow: 0.38;
+}
+
+.lp-gradient-text {
+  background: linear-gradient(100deg, var(--lp-a), var(--lp-b), var(--lp-c), var(--lp-a));
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lp-pan 8s linear infinite;
+}
+
+.lp-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: var(--lp-glow);
+  animation: lp-blob 18s ease-in-out infinite alternate;
+}
+
+/* A grid "floor" receding in perspective, sliding towards the viewer. */
+.lp-floor {
+  position: absolute;
+  inset: auto -50% -10% -50%;
+  height: 70%;
+  transform: perspective(500px) rotateX(72deg);
+  transform-origin: bottom;
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in oklch, var(--lp-a) 35%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--lp-a) 35%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to top, black 10%, transparent 85%);
+  animation: lp-floor 3s linear infinite;
+}
+
+.lp-preserve,
+.lp-preserve * {
+  transform-style: preserve-3d;
+}
+
+.lp-float {
+  animation: lp-float 7s ease-in-out infinite;
+}
+.lp-float-slow {
+  animation: lp-float 10s ease-in-out infinite reverse;
+}
+
+.lp-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.lp-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgb(255 255 255 / 0.35) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: lp-shine 3.5s ease-in-out infinite;
+}
+
+.lp-gradient-border {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    conic-gradient(from var(--lp-angle), var(--lp-a), var(--lp-b), var(--lp-c), var(--lp-a))
+      border-box;
+  animation: lp-rotate 6s linear infinite;
+}
+
+@property --lp-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.lp-marquee {
+  display: flex;
+  width: max-content;
+  animation: lp-marquee 30s linear infinite;
+}
+.lp-marquee-mask {
+  mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+}
+
+/* Scroll reveal: <Reveal> sets data-shown when the element enters the viewport. */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(28px) scale(0.98);
+  filter: blur(6px);
+  transition:
+    opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 0.8s ease;
+  transition-delay: var(--lp-delay, 0ms);
+}
+.lp-reveal[data-shown] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* Cursor spotlight on cards (<Tilt> sets --mx / --my). */
+.lp-spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  background: radial-gradient(
+    380px circle at var(--mx, 50%) var(--my, 50%),
+    color-mix(in oklch, var(--lp-a) 22%, transparent),
+    transparent 60%
+  );
+}
+.lp-spotlight:hover::before {
+  opacity: 1;
+}
+
+.lp-cube {
+  animation: lp-cube 14s linear infinite;
+}
+.lp-orbit {
+  animation: lp-orbit 12s linear infinite;
+}
+.lp-caret {
+  animation: lp-blink 1s steps(1) infinite;
+}
+.lp-scan {
+  animation: lp-scan 1.4s ease-in-out;
+}
+.lp-pop {
+  animation: lp-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes lp-pan {
+  to {
+    background-position: 300% 0;
+  }
+}
+@keyframes lp-blob {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(8%, -10%) scale(1.15);
+  }
+  100% {
+    transform: translate(-10%, 6%) scale(0.95);
+  }
+}
+@keyframes lp-floor {
+  to {
+    background-position: 0 56px;
+  }
+}
+@keyframes lp-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -14px;
+  }
+}
+@keyframes lp-shine {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+@keyframes lp-rotate {
+  to {
+    --lp-angle: 360deg;
+  }
+}
+@keyframes lp-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes lp-cube {
+  from {
+    transform: rotateX(-18deg) rotateY(0deg);
+  }
+  to {
+    transform: rotateX(-18deg) rotateY(360deg);
+  }
+}
+@keyframes lp-orbit {
+  from {
+    transform: rotateX(70deg) rotateZ(0deg);
+  }
+  to {
+    transform: rotateX(70deg) rotateZ(360deg);
+  }
+}
+@keyframes lp-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes lp-scan {
+  from {
+    top: 0%;
+    opacity: 1;
+  }
+  to {
+    top: 100%;
+    opacity: 0;
+  }
+}
+@keyframes lp-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing *,
+  .landing *::before,
+  .landing *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+  .lp-reveal {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
