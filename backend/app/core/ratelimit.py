@@ -12,4 +12,6 @@ limiter = Limiter(
     storage_uri=_settings.redis_url,
     enabled=_settings.rate_limit_enabled,
     headers_enabled=False,
+    # A safety net for every route (SlowAPIMiddleware); costly routes set tighter limits.
+    default_limits=["300/minute"],
 )

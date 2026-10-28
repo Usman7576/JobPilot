@@ -28,6 +28,11 @@ def _fernet() -> MultiFernet:
     return MultiFernet([Fernet(k.encode()) for k in keys])
 
 
+def reset_key_cache() -> None:
+    """Forget the cached keys (after ENCRYPTION_KEYS changes inside a running process)."""
+    _fernet.cache_clear()
+
+
 def encrypt_bytes(data: bytes) -> bytes:
     return _fernet().encrypt(data)
 
@@ -88,3 +93,21 @@ def decrypt_file(blob: bytes) -> bytes:
     pos += _NONCE
     dek = AESGCM(_master_key()).decrypt(wrap_nonce, wrapped, _FILE_MAGIC)
     return AESGCM(dek).decrypt(data_nonce, blob[pos:], None)
+
+
+def rewrap_file(blob: bytes, old_master_key: str) -> bytes:
+    """Re-wrap a file's data key from an old FILE_MASTER_KEY to the current one.
+
+    Only the 48-byte wrapped key changes; the file's ciphertext is kept as it is.
+    """
+    if not blob.startswith(_FILE_MAGIC):
+        raise ValueError("not an encrypted JobPilot file")
+    old = base64.b64decode(old_master_key)
+    head = len(_FILE_MAGIC)
+    wrap_nonce = blob[head : head + _NONCE]
+    wrapped = blob[head + _NONCE : head + _NONCE + 48]
+    rest = blob[head + _NONCE + 48 :]
+    dek = AESGCM(old).decrypt(wrap_nonce, wrapped, _FILE_MAGIC)
+    new_nonce = os.urandom(_NONCE)
+    rewrapped = AESGCM(_master_key()).encrypt(new_nonce, dek, _FILE_MAGIC)
+    return _FILE_MAGIC + new_nonce + rewrapped + rest

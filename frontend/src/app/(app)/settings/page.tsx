@@ -3,9 +3,11 @@ import { Suspense } from "react";
 
 import { PageHeader } from "@/components/common/page-header";
 import { PreferencesForm } from "@/components/preferences/preferences-form";
+import { DangerZone } from "@/components/settings/danger-zone";
 import { GmailCard } from "@/components/settings/gmail-card";
 import { ScheduleCard } from "@/components/settings/schedule-card";
 import { SheetsCard } from "@/components/settings/sheets-card";
+import { UsageCard } from "@/components/settings/usage-card";
 
 import { AccountSettings } from "./account-settings";
 
@@ -46,6 +48,14 @@ export default function SettingsPage() {
             </p>
           </div>
           <PreferencesForm />
+        </section>
+        <section className="grid gap-4">
+          <h2 className="text-lg font-semibold">AI usage</h2>
+          <UsageCard />
+        </section>
+        <section className="grid gap-4">
+          <h2 className="text-lg font-semibold">Danger zone</h2>
+          <DangerZone />
         </section>
       </div>
     </>

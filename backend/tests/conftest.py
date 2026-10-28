@@ -5,6 +5,7 @@ import base64
 import os
 import sys
 from collections.abc import AsyncIterator, Iterator
+from urllib.parse import urlsplit, urlunsplit
 
 # --- Environment for the app under test (must run before any app import) ---------------
 os.environ["ENV"] = "test"
@@ -20,7 +21,10 @@ _test_db = os.environ.get(
     "TEST_DATABASE_URL", "postgresql+psycopg://jobpilot:jobpilot@localhost:5432/jobpilot_test"
 )
 os.environ["DATABASE_URL"] = _test_db
-os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
+# Tests get their own Redis database: they clear keys (AI request counters, source pauses,
+# caches), and must never touch the ones a running dev app relies on.
+_redis_url = urlsplit(os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+os.environ["REDIS_URL"] = urlunsplit(_redis_url._replace(path="/15"))
 os.environ["LLM_PROVIDER"] = "fake"
 os.environ["WRITING_LLM_PROVIDER"] = ""
 os.environ["HUNTER_API_KEY"] = ""

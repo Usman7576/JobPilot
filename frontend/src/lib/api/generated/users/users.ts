@@ -24,6 +24,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  DeleteAccountIn,
   HTTPValidationError,
   UserOut,
   UserUpdate
@@ -152,7 +153,95 @@ export function useUsersGetMe<TData = Awaited<ReturnType<typeof usersGetMe>>, TE
 
 
 
-export const getUsersUpdateMeUrl = () => {
+export const getUsersDeleteMeUrl = () => {
+
+
+
+
+  return `/api/v1/users/me`
+}
+
+/**
+ * Delete your account and all your data. Type DELETE to confirm; this can't be undone.
+ * @summary Delete Me
+ */
+export const usersDeleteMe = async (deleteAccountIn: DeleteAccountIn, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<void>(getUsersDeleteMeUrl(),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(deleteAccountIn)
+  }
+);}
+
+
+
+
+
+export const getUsersDeleteMeMutationKey = () => ['usersDeleteMe'] as const;
+
+export const getUsersDeleteMeMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usersDeleteMe>>, TError,UsersDeleteMeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof usersDeleteMe>>, TError,UsersDeleteMeMutationVariables, TContext> => {
+
+const mutationKey = getUsersDeleteMeMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof usersDeleteMe>>, UsersDeleteMeMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  usersDeleteMe(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UsersDeleteMeMutationResult = NonNullable<Awaited<ReturnType<typeof usersDeleteMe>>>
+    export type UsersDeleteMeMutationBody = BodyType<DeleteAccountIn>
+    export type UsersDeleteMeMutationError = ErrorType<HTTPValidationError>
+    export type UsersDeleteMeMutationVariables = {data: BodyType<DeleteAccountIn>}
+
+    /**
+ * @summary Delete Me
+ */
+export const useUsersDeleteMe = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof usersDeleteMe>>, TError,UsersDeleteMeMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof usersDeleteMe>>,
+        TError,
+        UsersDeleteMeMutationVariables,
+        TContext
+      > => {
+      return useMutation(getUsersDeleteMeMutationOptions(options), queryClient);
+    }
+    export const getUsersUpdateMeUrl = () => {
 
 
 
@@ -239,3 +328,104 @@ export const useUsersUpdateMe = <TError = ErrorType<HTTPValidationError>,
       > => {
       return useMutation(getUsersUpdateMeMutationOptions(options), queryClient);
     }
+    export const getUsersExportMyDataUrl = () => {
+
+
+
+
+  return `/api/v1/users/me/export`
+}
+
+/**
+ * Download everything stored about you (JSON files + your resume files).
+ * @summary Export My Data
+ */
+export const usersExportMyData = async ( options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getUsersExportMyDataUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getUsersExportMyDataQueryKey = () => {
+    return [
+    `/api/v1/users/me/export`
+    ] as const;
+    }
+
+
+export const getUsersExportMyDataQueryOptions = <TData = Awaited<ReturnType<typeof usersExportMyData>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersExportMyData>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getUsersExportMyDataQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof usersExportMyData>>> = ({ signal }) => usersExportMyData({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof usersExportMyData>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type UsersExportMyDataQueryResult = NonNullable<Awaited<ReturnType<typeof usersExportMyData>>>
+export type UsersExportMyDataQueryError = ErrorType<unknown>
+
+
+export function useUsersExportMyData<TData = Awaited<ReturnType<typeof usersExportMyData>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersExportMyData>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof usersExportMyData>>,
+          TError,
+          Awaited<ReturnType<typeof usersExportMyData>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersExportMyData<TData = Awaited<ReturnType<typeof usersExportMyData>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersExportMyData>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof usersExportMyData>>,
+          TError,
+          Awaited<ReturnType<typeof usersExportMyData>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useUsersExportMyData<TData = Awaited<ReturnType<typeof usersExportMyData>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersExportMyData>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Export My Data
+ */
+
+export function useUsersExportMyData<TData = Awaited<ReturnType<typeof usersExportMyData>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof usersExportMyData>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getUsersExportMyDataQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+

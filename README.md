@@ -1,10 +1,27 @@
 # JobPilot AI
 
-Upload a resume, get fresh jobs from LinkedIn, Indeed, Glassdoor and Google ranked by fit with
-an explained score, and prepare tailored applications that are only ever sent when you click
-**Apply**.
+Upload your resume and JobPilot finds fresh jobs and internships, ranks them by how well they
+fit you (with the reasons), and helps you apply: a tailored email and cover letter written
+only from facts on your resume, then a tracker from *saved* to *offer*. Nothing is ever sent or
+submitted for you: you review every draft and click yourself.
 
-> **Status:** Phase 1 (foundation) of 8. See [docs/PLAN.md](docs/PLAN.md) for the full plan.
+It runs on free tiers: Gemini and Groq for AI, local embeddings, free job APIs, and your own
+computer or a free cloud VM.
+
+## What it does
+
+| | |
+|---|---|
+| **Resume** | Upload a PDF/DOCX; AI turns it into an editable profile. Files are encrypted at rest. |
+| **Find jobs** | Searches free job APIs (Arbeitnow, Remotive, Jooble, Adzuna, optional SerpAPI) for jobs or internships, by title and country/city. Optional scrapers (LinkedIn, Indeed…) are off by default. Duplicates are merged. Internships are labelled paid / unpaid. |
+| **Match** | Filters out what you excluded, ranks the rest by similarity to your resume, and has AI score the best 15 (skills, experience, seniority, domain, location) with red flags and a plain-language reason. |
+| **Apply** | Finds a contact email, writes an email and cover letter from a *fact sheet* of your resume, and flags any number, skill or degree that isn't on it. You copy the email, open it in your mail app, or apply on the company site with a checklist. |
+| **Track** | Drag-and-drop board (Saved → Applied → Replied → Interview → Offer / Rejected), timelines, follow-up reminders and AI follow-up drafts, a dashboard with your funnel and the skills to learn next. |
+| **Automate** | A daily search at your chosen hour with an email digest of new strong matches, and a Google Sheets tracker that updates itself. |
+| **Your data** | Export everything as a zip, or delete your account and all its data. |
+
+Not built yet: sending from the app through Gmail (you send from your own inbox) and
+detecting Gmail replies automatically (you move the card to *Replied*).
 
 ## Architecture
 
@@ -15,31 +32,35 @@ flowchart LR
   A --> PG[(Postgres + pgvector)]
   A --> R[(Redis)]
   R --> WK[worker: Celery]
-  BT[beat: Celery Beat] --> R
+  BT[beat: scheduler] --> R
   WK --> PG
-  WK --> X[Gemini · JobSpy · Gmail · Sheets]
+  WK --> X[Gemini · Groq · job APIs · Gmail · Sheets]
 ```
 
-- **Free stack:** Gemini free tier (LLM), fastembed (local embeddings), JobSpy (scraping),
-  everything else self-hosted in Docker. See [PLAN §25](docs/PLAN.md#25-zero-cost-stack-build-and-run-for-free).
-- **Auth:** backend-owned JWT + rotating refresh tokens in httpOnly cookies, same-origin via
-  the Next.js proxy ([ADR 0001](docs/adr/0001-auth-in-backend.md)).
+- **Backend:** FastAPI, SQLAlchemy 2, Alembic, Celery + Redis, Postgres with pgvector,
+  fastembed (local embeddings). AI behind one interface: Gemini, Groq, Ollama or Claude.
+- **Frontend:** Next.js 16 (App Router), Tailwind, shadcn/ui, TanStack Query with a typed
+  client generated from the API (orval).
+- **Security:** auth cookies are httpOnly, same-origin and CSRF-protected; refresh tokens rotate
+  with reuse detection ([ADR 0001](docs/adr/0001-auth-in-backend.md)); resume files and tokens
+  are encrypted; logs never contain resume text or secrets; CSP and rate limits everywhere.
 
-## Quick start (Windows, macOS, Linux)
+The full design is in [docs/PLAN.md](docs/PLAN.md).
 
-Requirements: Docker Desktop, Python 3 (only to run the env script), Node 24 and
-[uv](https://docs.astral.sh/uv/) if you want to run tools outside Docker.
+## Quick start
+
+Requirements: Docker Desktop, Python 3, Node 24, and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 python scripts/init_env.py
 ```
 
+That creates `.env` with fresh secrets. Add a free Gemini key from
+<https://aistudio.google.com/apikey> as `GEMINI_API_KEY` (see [API keys](#api-keys)), then:
+
 ```bash
 docker compose up -d --build
 ```
-
-The frontend dev server runs on your machine, not in Docker (Next.js file watching is
-unreliable through Docker mounts on Windows/macOS):
 
 ```bash
 cd frontend && npm install && npm run dev
@@ -48,40 +69,16 @@ cd frontend && npm install && npm run dev
 | URL | What |
 |---|---|
 | http://localhost:3000 | the app |
-| http://localhost:8000/api/docs | API docs (Swagger) |
-| http://localhost:8025 | Mailpit: verification and reset emails land here |
+| http://localhost:8000/api/docs | API docs |
+| http://localhost:8025 | Mailpit: verification emails and digests land here |
 
-The API container runs `alembic upgrade head` on start.
+Create an account, click the link in Mailpit, upload your resume, set your preferences and
+click **Find jobs**.
 
-**Low on RAM?** Docker Desktop's WSL VM keeps build caches in memory. Capping it leaves room
-for the Next.js dev server: create `%UserProfile%\.wslconfig` with
-
-```ini
-[wsl2]
-memory=4GB
-```
-
-then run `wsl --shutdown` and restart Docker Desktop.
-
-### Try it
-
-1. Open http://localhost:3000. You're redirected to `/login`.
-2. **Create an account**, then open http://localhost:8025 and click the verification link.
-3. Sign in. You land on `/onboarding`; the sidebar has Jobs, Applications, Dashboard, Settings.
-4. In **Settings**, change your timezone or daily send cap and save.
-5. Reload: you stay signed in. After 15 minutes the access token expires and is refreshed
-   silently. Sign out from the avatar menu.
-
-## AI resume parsing (free Gemini key)
-
-Create a free key at https://aistudio.google.com/apikey and set `GEMINI_API_KEY` in `.env`.
-Without it, uploads are stored and you'll see "AI parsing isn't set up yet". Embeddings run
-locally with fastembed; the first run downloads the model (~220 MB) into `data/models`.
-
-## Low-memory mode: API and worker without Docker builds
+### Low-memory mode (no backend Docker build)
 
 Building the backend image needs a lot of RAM. On a tight machine, run only the data services
-in Docker and the Python processes directly (needs [uv](https://docs.astral.sh/uv/)):
+in Docker and the Python processes directly:
 
 ```bash
 docker compose up -d postgres redis mailpit
@@ -91,7 +88,8 @@ docker compose up -d postgres redis mailpit
 cp backend/.env.host.example backend/.env.host
 ```
 
-Then, in `backend/`, in two terminals:
+Then, in `backend/`, one terminal each for the API, the worker and (optionally, for daily
+searches and digests) the scheduler:
 
 ```bash
 uv run --env-file ../.env --env-file .env.host uvicorn app.main:app --port 8000 --reload
@@ -101,46 +99,84 @@ uv run --env-file ../.env --env-file .env.host uvicorn app.main:app --port 8000 
 uv run --env-file ../.env --env-file .env.host celery -A app.tasks.celery_app worker -P solo -Q default,scrape,llm,email,sync -l info
 ```
 
-Optional, for daily searches and digest emails (a small scheduler process):
-
 ```bash
 uv run --env-file ../.env --env-file .env.host celery -A app.tasks.celery_app beat -l info -s ../data/celerybeat-schedule
 ```
 
-## Google sign-in (optional, free)
+On Windows, capping Docker's memory helps: create `%UserProfile%\.wslconfig` with
+`[wsl2]` and `memory=4GB`, then run `wsl --shutdown` and restart Docker Desktop.
 
-1. In [Google Cloud Console](https://console.cloud.google.com/) create a project, configure the
-   OAuth consent screen (External, Testing) and add yourself as a test user.
-2. Create an **OAuth client ID** (Web application) with the authorized redirect URI
-   `http://localhost:3000/api/v1/auth/google/callback`.
-3. Put the client ID and secret in `.env` (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), then
-   `docker compose up -d api`. A **Continue with Google** button appears on the login page.
+## API keys
+
+All free. Put them in `.env` and restart the API and worker.
+
+| Key | What for | Where |
+|---|---|---|
+| `GEMINI_API_KEY` | Reading resumes, scoring matches, fact-checking (required) | <https://aistudio.google.com/apikey> |
+| `GROQ_API_KEY` + `WRITING_LLM_PROVIDER=groq` | Writing emails and cover letters (better than free Gemini) | <https://console.groq.com> |
+| `JOOBLE_API_KEY` | More jobs, including Pakistan | <https://jooble.org/api/about> |
+| `ADZUNA_APP_ID`, `ADZUNA_APP_KEY` | Jobs in 19 countries, with salaries | <https://developer.adzuna.com> |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google sign-in, Gmail, Sheets | Google Cloud Console (below) |
+| `HUNTER_API_KEY` | Finding recruiter emails when a post has none (25/month) | <https://hunter.io> |
+
+### Google (sign-in, Gmail, Sheets)
+
+1. In [Google Cloud Console](https://console.cloud.google.com/) create a project. Enable the
+   **Gmail API** and **Google Sheets API**.
+2. **OAuth consent screen**: External, Testing; add your Gmail as a **test user**; add the
+   scopes `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`,
+   `.../auth/gmail.send` and `.../auth/drive.file`.
+3. **Credentials → OAuth client ID** (Web application) with these redirect URIs:
+
+   ```
+   http://localhost:3000/api/v1/auth/google/callback
+   http://localhost:3000/api/v1/integrations/gmail/callback
+   http://localhost:3000/api/v1/integrations/sheets/callback
+   ```
+
+4. Put the client ID and secret in `.env`. Then use **Continue with Google** on the login page,
+   and **Settings → Connect Gmail / Connect Google Sheets**.
+
+## Deploying for free
+
+One Oracle Cloud *Always Free* VM runs the backend with
+[docker-compose.prod.yml](docker-compose.prod.yml), a Cloudflare Tunnel gives it HTTPS, and
+the website runs on Vercel. Step by step: [docs/DEPLOY.md](docs/DEPLOY.md). Operations
+(updates, logs, backups, key rotation): [docs/RUNBOOK.md](docs/RUNBOOK.md).
 
 ## Development
 
 | Task | Command |
 |---|---|
-| Backend tests (in Docker) | `make test` |
-| Backend tests (local, needs `docker compose up -d postgres redis`) | `cd backend && uv run pytest` |
+| Backend tests (needs postgres + redis running) | `cd backend && uv run --env-file ../.env --env-file .env.host pytest` |
 | Lint + types | `make lint` |
 | New migration | `make migration m="add something"` |
 | Regenerate the typed API client | `make gen-api` |
-| Celery dashboard | `docker compose --profile tools up -d flower` → http://localhost:5555 |
+| Rotate encryption keys | `cd backend && uv run python scripts/rotate_keys.py` ([how](docs/RUNBOOK.md#rotate-encryption-keys)) |
 
-Without `make` on Windows, run the commands from the [Makefile](Makefile) directly.
+Without `make` on Windows, run the commands from the [Makefile](Makefile) directly. CI runs
+lint, types, tests (coverage must stay above 80%), the frontend build, and checks the typed
+API client matches the API.
 
 ## Project layout
 
 ```
-backend/    FastAPI app, SQLAlchemy models, Alembic migrations, Celery tasks, tests
+backend/    FastAPI app, models, migrations, Celery tasks, prompts, tests
 frontend/   Next.js app (App Router, Tailwind, shadcn/ui, TanStack Query, orval client)
-docs/       PLAN.md, ADRs
-scripts/    init_env.py
+docs/       PLAN.md, DEPLOY.md, RUNBOOK.md, ADRs
+scripts/    init_env.py, backup.sh
 ```
 
 ## Environment variables
 
-All variables are listed with comments in [.env.example](.env.example). The ones you must
-set are generated by `scripts/init_env.py`: `SECRET_KEY`, `ENCRYPTION_KEYS` (Fernet keys,
-comma-separated, first one encrypts) and `FILE_MASTER_KEY`. **Back up `.env`**: losing the
-encryption keys makes stored resumes and tokens unreadable.
+Every variable is listed with comments in [.env.example](.env.example) (development) and
+[.env.production.example](.env.production.example) (production). `scripts/init_env.py`
+generates the secrets: `SECRET_KEY`, `ENCRYPTION_KEYS` and `FILE_MASTER_KEY`. **Keep a copy of
+the encryption keys**: without them stored resumes and tokens can't be read, even from a
+backup.
+
+## Responsible use
+
+JobPilot never sends an email or submits a form without your click, never logs in to job
+boards, and keeps a daily send cap. Job sources are read from public listings and may break
+without notice; you're responsible for following each site's terms.

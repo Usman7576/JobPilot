@@ -11,6 +11,7 @@ from app.api.v1 import (
     preferences,
     resumes,
     searches,
+    usage,
     users,
 )
 
@@ -26,3 +27,4 @@ api_router.include_router(applications.router)
 api_router.include_router(integrations.router)
 api_router.include_router(notifications.router)
 api_router.include_router(dashboard.router)
+api_router.include_router(usage.router)

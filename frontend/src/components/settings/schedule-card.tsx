@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/generated/preferences/preferences";
 import { useUsersGetMe } from "@/lib/api/generated/users/users";
 import { errorMessage } from "@/lib/forms";
+import { useHydrated } from "@/lib/use-hydrated";
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const SCORES = [65, 70, 80, 90];
@@ -47,6 +48,8 @@ export function ScheduleCard() {
   const queryClient = useQueryClient();
   const prefs = usePreferencesGetPreferences();
   const me = useUsersGetMe();
+  // The user is cached by the app shell: show it only after hydration (see useHydrated).
+  const user = useHydrated() ? me.data : undefined;
   const save = usePreferencesSavePreferences();
   // Local edits; null means "showing what's saved".
   const [draft, setDraft] = useState<Schedule | null>(null);
@@ -108,7 +111,7 @@ export function ScheduleCard() {
         <div className="grid gap-3 pl-6 sm:grid-cols-2">
           <label className="grid gap-1">
             <span className="text-muted-foreground text-xs">
-              At ({me.data?.timezone ?? "your time zone"})
+              At ({user?.timezone ?? "your time zone"})
             </span>
             <select
               className={selectClass}
@@ -168,7 +171,7 @@ export function ScheduleCard() {
         </label>
         <p className="text-muted-foreground text-xs">
           The daily search needs the scheduler running (the &ldquo;beat&rdquo; process). Emails go
-          to {me.data?.email ?? "your account email"}; in local testing they land in Mailpit.
+          to {user?.email ?? "your account email"}; in local testing they land in Mailpit.
         </p>
 
         <div className="flex gap-2">

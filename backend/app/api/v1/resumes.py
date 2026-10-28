@@ -44,8 +44,9 @@ async def get_resume(resume_id: uuid.UUID, user: CurrentUser, db: DbSession) -> 
 
 
 @router.put("/{resume_id}/profile")
+@limiter.limit("30/hour")  # each save re-scores your best jobs with the AI
 async def update_profile(
-    resume_id: uuid.UUID, body: ResumeProfile, user: CurrentUser, db: DbSession
+    request: Request, resume_id: uuid.UUID, body: ResumeProfile, user: CurrentUser, db: DbSession
 ) -> ResumeOut:
     """Save the user's edits. Bumps profile_version, which invalidates cached match scores."""
     resume = await resume_service.get_owned(db, user, resume_id)
@@ -64,7 +65,10 @@ async def update_label(
 
 
 @router.post("/{resume_id}/activate")
-async def activate_resume(resume_id: uuid.UUID, user: CurrentUser, db: DbSession) -> ResumeSummary:
+@limiter.limit("30/hour")  # switching versions can re-score jobs too
+async def activate_resume(
+    request: Request, resume_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> ResumeSummary:
     resume = await resume_service.get_owned(db, user, resume_id)
     return resume_service.to_summary(await resume_service.activate(db, user, resume))
 

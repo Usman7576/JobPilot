@@ -12,8 +12,14 @@ COPY --from=ghcr.io/astral-sh/uv:0.13 /uv /usr/local/bin/uv
 WORKDIR /app
 
 # Dependencies first, so code changes don't invalidate this layer.
+# Production images skip test/lint tools: docker build --build-arg INSTALL_DEV=false
+ARG INSTALL_DEV=true
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-install-project
+RUN if [ "$INSTALL_DEV" = "true" ]; then \
+        uv sync --frozen --no-install-project; \
+    else \
+        uv sync --frozen --no-install-project --no-dev; \
+    fi
 
 COPY . .
 

@@ -7,6 +7,7 @@ from collections.abc import Awaitable, Callable
 import structlog
 from fastapi import FastAPI, Request, Response
 from fastapi.routing import APIRoute
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.v1.router import api_router
 from app.core import security
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
         generate_unique_id_function=_operation_id,
     )
     app.state.limiter = limiter
+    app.add_middleware(SlowAPIMiddleware)  # applies the default limit to every route
     register_error_handlers(app)
 
     @app.middleware("http")
@@ -61,6 +63,14 @@ def create_app() -> FastAPI:
         response.headers["x-content-type-options"] = "nosniff"
         response.headers["referrer-policy"] = "strict-origin-when-cross-origin"
         response.headers["x-frame-options"] = "DENY"
+        # JSON and file downloads only: nothing here should ever run as a page (except the
+        # interactive API docs, which load their own scripts and exist only in development).
+        if not request.url.path.startswith(("/api/docs", "/api/redoc")):
+            response.headers.setdefault(
+                "content-security-policy", "default-src 'none'; frame-ancestors 'none'"
+            )
+        if settings.is_production:
+            response.headers["strict-transport-security"] = "max-age=63072000; includeSubDomains"
         return response
 
     app.include_router(api_router)

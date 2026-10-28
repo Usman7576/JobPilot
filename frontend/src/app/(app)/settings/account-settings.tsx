@@ -17,6 +17,7 @@ import {
   useUsersUpdateMe,
 } from "@/lib/api/generated/users/users";
 import { errorMessage, zodResolver } from "@/lib/forms";
+import { useHydrated } from "@/lib/use-hydrated";
 
 const schema = z.object({
   full_name: z.string().trim().max(120),
@@ -39,6 +40,7 @@ const TIMEZONES = [
 export function AccountSettings() {
   const queryClient = useQueryClient();
   const me = useUsersGetMe();
+  const hydrated = useHydrated();
   const update = useUsersUpdateMe();
   const form = useForm<Values>({ resolver: zodResolver(schema) });
 
@@ -53,7 +55,7 @@ export function AccountSettings() {
     }
   }, [me.data, form]);
 
-  if (!me.data) {
+  if (!hydrated || !me.data) {
     return <Skeleton className="h-80 w-full max-w-2xl rounded-xl" />;
   }
 

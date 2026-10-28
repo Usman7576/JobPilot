@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Annotated, Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 CsvList = Annotated[list[str], NoDecode]
@@ -119,6 +119,30 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [k.strip() for k in v.split(",") if k.strip()]
         return v
+
+    @model_validator(mode="after")
+    def _safe_for_production(self) -> Settings:
+        """Refuse to start in production with settings that are only fine on a laptop."""
+        if self.env != "production":
+            return self
+        problems = []
+        if not self.app_base_url.startswith("https://"):
+            problems.append("APP_BASE_URL must be https:// (cookies are Secure only over HTTPS)")
+        if self.application_send_backend != "gmail":
+            problems.append("APPLICATION_SEND_BACKEND=smtp is for local testing only")
+        if self.mail_backend != "smtp":
+            problems.append("MAIL_BACKEND must be smtp (console mail only prints to the logs)")
+        if not self.file_master_key:
+            problems.append("FILE_MASTER_KEY is required to encrypt resume files")
+        if not self.rate_limit_enabled:
+            problems.append("RATE_LIMIT_ENABLED must stay on")
+        if not self.require_email_verification:
+            problems.append("REQUIRE_EMAIL_VERIFICATION must stay on")
+        if self.writing_llm_provider == "fake" or self.llm_provider == "fake":
+            problems.append("the fake AI provider is for tests only")
+        if problems:
+            raise ValueError("Unsafe production settings: " + "; ".join(problems))
+        return self
 
     @property
     def is_production(self) -> bool:

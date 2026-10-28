@@ -46,7 +46,7 @@ jobs:
       - name: Type check
         run: uv run mypy app
       - name: Tests
-        run: uv run pytest --cov=app --cov-report=term-missing
+        run: uv run pytest --cov=app --cov-report=term-missing --cov-fail-under=80
 
   frontend:
     runs-on: ubuntu-latest

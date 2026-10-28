@@ -74,3 +74,7 @@ class UserUpdate(ApiModel):
         if v is not None and v not in available_timezones():
             raise ValueError("unknown timezone")
         return v
+
+
+class DeleteAccountIn(ApiModel):
+    confirm: Annotated[str, StringConstraints(max_length=20)]

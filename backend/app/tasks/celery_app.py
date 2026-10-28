@@ -19,6 +19,7 @@ celery_app = Celery(
         "app.tasks.application_tasks",
         "app.tasks.schedule_tasks",
         "app.tasks.sheets_tasks",
+        "app.tasks.account_tasks",
         "app.tasks.search_tasks",
     ],
 )
@@ -52,6 +53,10 @@ celery_app.conf.update(
         "worker-heartbeat": {
             "task": "app.tasks.maintenance_tasks.heartbeat",
             "schedule": 60.0,
+        },
+        "purge-deleted-accounts": {
+            "task": "app.tasks.account_tasks.purge_pending_accounts",
+            "schedule": 3600.0,
         },
         "daily-searches": {
             "task": "app.tasks.schedule_tasks.dispatch_daily_searches",

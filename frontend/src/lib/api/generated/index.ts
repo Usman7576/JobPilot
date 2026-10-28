@@ -8,4 +8,5 @@ export * from './notifications/notifications';
 export * from './preferences/preferences';
 export * from './resumes/resumes';
 export * from './searches/searches';
+export * from './usage/usage';
 export * from './users/users';

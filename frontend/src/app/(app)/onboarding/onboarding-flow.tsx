@@ -19,6 +19,7 @@ import {
 } from "@/lib/api/generated/resumes/resumes";
 import { useSearchesStartSearch } from "@/lib/api/generated/searches/searches";
 import { useUsersGetMe } from "@/lib/api/generated/users/users";
+import { useHydrated } from "@/lib/use-hydrated";
 import { cn } from "@/lib/utils";
 
 const STEPS: { key: OnboardingStep; label: string }[] = [
@@ -139,7 +140,8 @@ function PreferencesStep() {
 
 export function OnboardingFlow() {
   const me = useUsersGetMe();
-  if (!me.data) return <Skeleton className="h-64 w-full rounded-xl" />;
+  const hydrated = useHydrated();
+  if (!hydrated || !me.data) return <Skeleton className="h-64 w-full rounded-xl" />;
   const step = me.data.onboarding_step;
 
   return (
