@@ -70,6 +70,7 @@ def _card(app: Application, job: Job, score: int | None, now: datetime) -> Board
         match_score=score,
         sent_at=app.sent_at,
         last_reply_at=app.last_reply_at,
+        reply_classification=app.reply_classification,
         follow_up_at=app.follow_up_at,
         follow_up_due=bool(
             app.status == S.APPLIED and app.follow_up_at and app.follow_up_at <= now

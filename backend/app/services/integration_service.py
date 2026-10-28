@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.errors import AppError, Conflict
 from app.core.logging import get_logger
 from app.integrations import gmail, google_oauth
 from app.models import Integration, User
@@ -17,6 +18,12 @@ from app.models.enums import IntegrationProvider, IntegrationStatus
 from app.schemas.integration import IntegrationOut, IntegrationsOut
 
 log = get_logger(__name__)
+
+
+class NeedsReadAccess(AppError):
+    status_code, code, title = 409, "needs_read_access", "Gmail read access needed"
+
+
 REFRESH_EARLY = timedelta(minutes=2)
 
 
@@ -46,7 +53,29 @@ def to_out(provider: IntegrationProvider, row: Integration | None) -> Integratio
         last_error=row.last_error,
         last_sync_at=row.last_sync_at,
         spreadsheet_url=(row.config or {}).get("spreadsheet_url"),
+        can_read=gmail.READ_SCOPE in (row.scopes or []),
+        reply_detection=reply_detection_on(row),
+        replies_checked_at=(row.config or {}).get("replies_checked_at"),
     )
+
+
+def reply_detection_on(row: Integration) -> bool:
+    """Connected, read access granted, and not switched off by the user."""
+    return (
+        row.status == IntegrationStatus.CONNECTED
+        and gmail.READ_SCOPE in (row.scopes or [])
+        and (row.config or {}).get("reply_detection", True) is not False
+    )
+
+
+async def set_reply_detection(db: AsyncSession, user: User, enabled: bool) -> None:
+    row = await get(db, user.id, IntegrationProvider.GMAIL)
+    if row is None or row.status != IntegrationStatus.CONNECTED:
+        raise Conflict("Connect Gmail first.")
+    if enabled and gmail.READ_SCOPE not in (row.scopes or []):
+        raise NeedsReadAccess("Allow read-only Gmail access first (Turn on reply detection).")
+    row.config = {**(row.config or {}), "reply_detection": enabled}
+    await db.commit()
 
 
 async def overview(db: AsyncSession, user: User) -> IntegrationsOut:

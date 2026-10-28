@@ -15,6 +15,9 @@ class IntegrationOut(ApiModel):
     last_error: str | None = None
     last_sync_at: datetime | None = None
     spreadsheet_url: str | None = None  # sheets only
+    can_read: bool = False  # gmail: read-only access was granted
+    reply_detection: bool = False  # gmail: on (needs can_read)
+    replies_checked_at: datetime | None = None
 
 
 class IntegrationsOut(ApiModel):
@@ -27,3 +30,7 @@ class IntegrationsOut(ApiModel):
 
 class ConnectOut(ApiModel):
     url: str
+
+
+class ReplyDetectionIn(ApiModel):
+    enabled: bool

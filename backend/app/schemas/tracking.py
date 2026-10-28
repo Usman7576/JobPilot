@@ -6,7 +6,12 @@ from datetime import date, datetime
 from pydantic import Field
 
 from app.domain.board import Column
-from app.models.enums import ApplicationChannel, ApplicationStatus, NotificationKind
+from app.models.enums import (
+    ApplicationChannel,
+    ApplicationStatus,
+    NotificationKind,
+    ReplyClassification,
+)
 from app.schemas.common import ApiModel
 
 
@@ -23,6 +28,7 @@ class BoardCard(ApiModel):
     match_score: int | None
     sent_at: datetime | None
     last_reply_at: datetime | None
+    reply_classification: ReplyClassification | None
     follow_up_at: datetime | None
     follow_up_due: bool
     follow_up_count: int

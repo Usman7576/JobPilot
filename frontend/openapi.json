@@ -2370,7 +2370,7 @@
           "integrations"
         ],
         "summary": "Connect",
-        "description": "Returns Google's consent URL; the browser goes there, then back to the callback.",
+        "description": "Returns Google's consent URL; the browser goes there, then back to the callback.\n\nGmail with `read=true` also asks for read-only access, for reply detection.",
         "operationId": "integrations_connect",
         "parameters": [
           {
@@ -2379,6 +2379,16 @@
             "required": true,
             "schema": {
               "$ref": "#/components/schemas/IntegrationProvider"
+            }
+          },
+          {
+            "name": "read",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Read"
             }
           }
         ],
@@ -2496,6 +2506,68 @@
         "summary": "Sync Sheets",
         "description": "Rewrite the tracker sheet now (it also updates itself a few minutes after changes).",
         "operationId": "integrations_sync_sheets",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/gmail/reply-detection": {
+      "put": {
+        "tags": [
+          "integrations"
+        ],
+        "summary": "Set Reply Detection",
+        "description": "Turn reply detection on or off. Turning it on needs read access (connect with read=true).",
+        "operationId": "integrations_set_reply_detection",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyDetectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntegrationsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/gmail/check-replies": {
+      "post": {
+        "tags": [
+          "integrations"
+        ],
+        "summary": "Check Replies Now",
+        "description": "Look for replies now (it also runs every 15 minutes).",
+        "operationId": "integrations_check_replies_now",
         "responses": {
           "202": {
             "description": "Successful Response",
@@ -3226,6 +3298,16 @@
             ],
             "title": "Last Reply At"
           },
+          "reply_classification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReplyClassification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "follow_up_at": {
             "anyOf": [
               {
@@ -3267,6 +3349,7 @@
           "match_score",
           "sent_at",
           "last_reply_at",
+          "reply_classification",
           "follow_up_at",
           "follow_up_due",
           "follow_up_count",
@@ -3910,6 +3993,28 @@
               }
             ],
             "title": "Spreadsheet Url"
+          },
+          "can_read": {
+            "type": "boolean",
+            "title": "Can Read",
+            "default": false
+          },
+          "reply_detection": {
+            "type": "boolean",
+            "title": "Reply Detection",
+            "default": false
+          },
+          "replies_checked_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replies Checked At"
           }
         },
         "additionalProperties": false,
@@ -5494,6 +5599,31 @@
           "unknown"
         ],
         "title": "RemoteType"
+      },
+      "ReplyClassification": {
+        "type": "string",
+        "enum": [
+          "positive",
+          "interview",
+          "rejection",
+          "auto_reply",
+          "other"
+        ],
+        "title": "ReplyClassification"
+      },
+      "ReplyDetectionIn": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "ReplyDetectionIn"
       },
       "ResendVerificationIn": {
         "properties": {

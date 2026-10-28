@@ -20,6 +20,7 @@ celery_app = Celery(
         "app.tasks.schedule_tasks",
         "app.tasks.sheets_tasks",
         "app.tasks.account_tasks",
+        "app.tasks.reply_tasks",
         "app.tasks.search_tasks",
     ],
 )
@@ -57,6 +58,10 @@ celery_app.conf.update(
         "purge-deleted-accounts": {
             "task": "app.tasks.account_tasks.purge_pending_accounts",
             "schedule": 3600.0,
+        },
+        "gmail-replies": {
+            "task": "app.tasks.reply_tasks.check_all_replies",
+            "schedule": 900.0,
         },
         "daily-searches": {
             "task": "app.tasks.schedule_tasks.dispatch_daily_searches",

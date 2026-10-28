@@ -28,11 +28,13 @@ import type {
   HTTPValidationError,
   IntegrationProvider,
   IntegrationsCallbackParams,
-  IntegrationsOut
+  IntegrationsConnectParams,
+  IntegrationsOut,
+  ReplyDetectionIn
 } from '../model';
 
 import { customFetch } from '../../fetcher';
-import type { ErrorType } from '../../fetcher';
+import type { ErrorType , BodyType } from '../../fetcher';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -154,21 +156,32 @@ export function useIntegrationsListIntegrations<TData = Awaited<ReturnType<typeo
 
 
 
-export const getIntegrationsConnectUrl = (provider: IntegrationProvider,) => {
+export const getIntegrationsConnectUrl = (provider: IntegrationProvider,
+    params?: IntegrationsConnectParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/v1/integrations/${provider}/connect`
+  return stringifiedParams.length > 0 ? `/api/v1/integrations/${provider}/connect?${stringifiedParams}` : `/api/v1/integrations/${provider}/connect`
 }
 
 /**
  * Returns Google's consent URL; the browser goes there, then back to the callback.
+ *
+ * Gmail with `read=true` also asks for read-only access, for reply detection.
  * @summary Connect
  */
-export const integrationsConnect = async (provider: IntegrationProvider, options?: Parameters<typeof customFetch>[1]): Promise<ConnectOut> => {
+export const integrationsConnect = async (provider: IntegrationProvider,
+    params?: IntegrationsConnectParams, options?: Parameters<typeof customFetch>[1]): Promise<ConnectOut> => {
 
-  return customFetch<ConnectOut>(getIntegrationsConnectUrl(provider),
+  return customFetch<ConnectOut>(getIntegrationsConnectUrl(provider,params),
   {
     ...options,
     method: 'GET'
@@ -181,23 +194,25 @@ export const integrationsConnect = async (provider: IntegrationProvider, options
 
 
 
-export const getIntegrationsConnectQueryKey = (provider: IntegrationProvider,) => {
+export const getIntegrationsConnectQueryKey = (provider: IntegrationProvider,
+    params?: IntegrationsConnectParams,) => {
     return [
-    `/api/v1/integrations/${provider}/connect`
+    `/api/v1/integrations/${provider}/connect`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getIntegrationsConnectQueryOptions = <TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(provider: IntegrationProvider, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+export const getIntegrationsConnectQueryOptions = <TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(provider: IntegrationProvider,
+    params?: IntegrationsConnectParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getIntegrationsConnectQueryKey(provider);
+  const queryKey =  queryOptions?.queryKey ?? getIntegrationsConnectQueryKey(provider,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof integrationsConnect>>> = ({ signal }) => integrationsConnect(provider, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof integrationsConnect>>> = ({ signal }) => integrationsConnect(provider,params, { signal, ...requestOptions });
 
 
 
@@ -211,7 +226,8 @@ export type IntegrationsConnectQueryError = ErrorType<HTTPValidationError>
 
 
 export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(
- provider: IntegrationProvider, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>> & Pick<
+ provider: IntegrationProvider,
+    params: undefined |  IntegrationsConnectParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof integrationsConnect>>,
           TError,
@@ -221,7 +237,8 @@ export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integra
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(
- provider: IntegrationProvider, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>> & Pick<
+ provider: IntegrationProvider,
+    params?: IntegrationsConnectParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof integrationsConnect>>,
           TError,
@@ -231,7 +248,8 @@ export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integra
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(
- provider: IntegrationProvider, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ provider: IntegrationProvider,
+    params?: IntegrationsConnectParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
@@ -239,11 +257,12 @@ export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integra
  */
 
 export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(
- provider: IntegrationProvider, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ provider: IntegrationProvider,
+    params?: IntegrationsConnectParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getIntegrationsConnectQueryOptions(provider,options)
+  const queryOptions = getIntegrationsConnectQueryOptions(provider,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -443,6 +462,168 @@ export const useIntegrationsSyncSheets = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getIntegrationsSyncSheetsMutationOptions(options), queryClient);
+    }
+    export const getIntegrationsSetReplyDetectionUrl = () => {
+
+
+
+
+  return `/api/v1/integrations/gmail/reply-detection`
+}
+
+/**
+ * Turn reply detection on or off. Turning it on needs read access (connect with read=true).
+ * @summary Set Reply Detection
+ */
+export const integrationsSetReplyDetection = async (replyDetectionIn: ReplyDetectionIn, options?: Parameters<typeof customFetch>[1]): Promise<IntegrationsOut> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<IntegrationsOut>(getIntegrationsSetReplyDetectionUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(replyDetectionIn)
+  }
+);}
+
+
+
+
+
+export const getIntegrationsSetReplyDetectionMutationKey = () => ['integrationsSetReplyDetection'] as const;
+
+export const getIntegrationsSetReplyDetectionMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof integrationsSetReplyDetection>>, TError,IntegrationsSetReplyDetectionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof integrationsSetReplyDetection>>, TError,IntegrationsSetReplyDetectionMutationVariables, TContext> => {
+
+const mutationKey = getIntegrationsSetReplyDetectionMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof integrationsSetReplyDetection>>, IntegrationsSetReplyDetectionMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  integrationsSetReplyDetection(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IntegrationsSetReplyDetectionMutationResult = NonNullable<Awaited<ReturnType<typeof integrationsSetReplyDetection>>>
+    export type IntegrationsSetReplyDetectionMutationBody = BodyType<ReplyDetectionIn>
+    export type IntegrationsSetReplyDetectionMutationError = ErrorType<HTTPValidationError>
+    export type IntegrationsSetReplyDetectionMutationVariables = {data: BodyType<ReplyDetectionIn>}
+
+    /**
+ * @summary Set Reply Detection
+ */
+export const useIntegrationsSetReplyDetection = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof integrationsSetReplyDetection>>, TError,IntegrationsSetReplyDetectionMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof integrationsSetReplyDetection>>,
+        TError,
+        IntegrationsSetReplyDetectionMutationVariables,
+        TContext
+      > => {
+      return useMutation(getIntegrationsSetReplyDetectionMutationOptions(options), queryClient);
+    }
+    export const getIntegrationsCheckRepliesNowUrl = () => {
+
+
+
+
+  return `/api/v1/integrations/gmail/check-replies`
+}
+
+/**
+ * Look for replies now (it also runs every 15 minutes).
+ * @summary Check Replies Now
+ */
+export const integrationsCheckRepliesNow = async ( options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getIntegrationsCheckRepliesNowUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getIntegrationsCheckRepliesNowMutationKey = () => ['integrationsCheckRepliesNow'] as const;
+
+export const getIntegrationsCheckRepliesNowMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof integrationsCheckRepliesNow>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof integrationsCheckRepliesNow>>, TError,void, TContext> => {
+
+const mutationKey = getIntegrationsCheckRepliesNowMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof integrationsCheckRepliesNow>>, void> = () => {
+
+
+          return  integrationsCheckRepliesNow(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IntegrationsCheckRepliesNowMutationResult = NonNullable<Awaited<ReturnType<typeof integrationsCheckRepliesNow>>>
+
+    export type IntegrationsCheckRepliesNowMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Check Replies Now
+ */
+export const useIntegrationsCheckRepliesNow = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof integrationsCheckRepliesNow>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof integrationsCheckRepliesNow>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getIntegrationsCheckRepliesNowMutationOptions(options), queryClient);
     }
     export const getIntegrationsDisconnectUrl = (provider: IntegrationProvider,) => {
 

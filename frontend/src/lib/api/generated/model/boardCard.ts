@@ -7,6 +7,7 @@
 import type { ApplicationChannel } from './applicationChannel';
 import type { ApplicationStatus } from './applicationStatus';
 import type { BoardCardColumn } from './boardCardColumn';
+import type { ReplyClassification } from './replyClassification';
 
 export interface BoardCard {
   id: string;
@@ -21,6 +22,7 @@ export interface BoardCard {
   match_score: number | null;
   sent_at: string | null;
   last_reply_at: string | null;
+  reply_classification: ReplyClassification | null;
   follow_up_at: string | null;
   follow_up_due: boolean;
   follow_up_count: number;

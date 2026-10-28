@@ -16,7 +16,7 @@ from app.core.logging import get_logger
 from app.core.ratelimit import limiter
 from app.integrations import gmail, google_oauth, google_sheets
 from app.models.enums import IntegrationProvider, IntegrationStatus
-from app.schemas.integration import ConnectOut, IntegrationsOut
+from app.schemas.integration import ConnectOut, IntegrationsOut, ReplyDetectionIn
 from app.services import integration_service, sheets_service
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -53,9 +53,16 @@ async def list_integrations(user: CurrentUser, db: DbSession) -> IntegrationsOut
 @router.get("/{provider}/connect")
 @limiter.limit("10/minute")
 async def connect(
-    request: Request, response: Response, provider: IntegrationProvider, user: CurrentUser
+    request: Request,
+    response: Response,
+    provider: IntegrationProvider,
+    user: CurrentUser,
+    read: bool = False,
 ) -> ConnectOut:
-    """Returns Google's consent URL; the browser goes there, then back to the callback."""
+    """Returns Google's consent URL; the browser goes there, then back to the callback.
+
+    Gmail with `read=true` also asks for read-only access, for reply detection.
+    """
     settings = get_settings()
     if not settings.google_login_enabled:
         raise GoogleNotConfigured("Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env.")
@@ -72,7 +79,10 @@ async def connect(
         samesite="lax",
         path=STATE_PATH,
     )
-    url = FLOWS[provider].consent_url(state, pkce.challenge, user.email)
+    if provider == IntegrationProvider.GMAIL:
+        url = gmail.consent_url(state, pkce.challenge, user.email, read=read)
+    else:
+        url = FLOWS[provider].consent_url(state, pkce.challenge, user.email)
     return ConnectOut(url=url)
 
 
@@ -123,6 +133,27 @@ async def sync_sheets(request: Request, user: CurrentUser, db: DbSession) -> Non
     if row is None or row.status != IntegrationStatus.CONNECTED:
         raise Conflict("Connect Google Sheets first.")
     sheets_service.request_sync(user.id, now=True)
+
+
+@router.put("/gmail/reply-detection")
+async def set_reply_detection(
+    body: ReplyDetectionIn, user: CurrentUser, db: DbSession
+) -> IntegrationsOut:
+    """Turn reply detection on or off. Turning it on needs read access (connect with read=true)."""
+    await integration_service.set_reply_detection(db, user, body.enabled)
+    return await integration_service.overview(db, user)
+
+
+@router.post("/gmail/check-replies", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("10/minute")
+async def check_replies_now(request: Request, user: CurrentUser, db: DbSession) -> None:
+    """Look for replies now (it also runs every 15 minutes)."""
+    from app.tasks.reply_tasks import check_replies
+
+    row = await integration_service.get(db, user.id, IntegrationProvider.GMAIL)
+    if row is None or not integration_service.reply_detection_on(row):
+        raise Conflict("Turn on reply detection first.")
+    check_replies.delay(str(user.id))
 
 
 @router.delete("/{provider}", status_code=status.HTTP_204_NO_CONTENT)

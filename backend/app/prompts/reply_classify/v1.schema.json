@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string",
+      "enum": ["interview", "rejection", "positive", "auto_reply", "other"]
+    },
+    "confidence": { "type": "number" }
+  },
+  "required": ["label", "confidence"]
+}

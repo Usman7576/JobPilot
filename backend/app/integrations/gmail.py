@@ -7,8 +7,10 @@ Reply detection (Phase 6) will ask for more access separately.
 from __future__ import annotations
 
 import base64
+import html
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from email.utils import parseaddr
 from typing import Any
 
 import httpx
@@ -17,7 +19,11 @@ from app.core.config import get_settings
 from app.integrations import google_oauth
 
 SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
+# Optional, for reply detection: read-only, and the app only searches for messages from the
+# contacts and companies you applied to.
+READ_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
 SCOPES = ("openid", "email", SEND_SCOPE)
+MESSAGES_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
 SEND_URL = "https://gmail.googleapis.com/gmail/v1/users/me/messages/send"
 
 
@@ -47,7 +53,9 @@ class Sent:
     thread_id: str | None
 
 
-def consent_url(state: str, code_challenge: str, login_hint: str | None = None) -> str:
+def consent_url(
+    state: str, code_challenge: str, login_hint: str | None = None, *, read: bool = False
+) -> str:
     extra = {
         "access_type": "offline",  # a refresh token, so sends work when the user is away
         "prompt": "consent",  # always return a refresh token, even on reconnect
@@ -59,7 +67,7 @@ def consent_url(state: str, code_challenge: str, login_hint: str | None = None) 
         redirect_uri=get_settings().google_gmail_redirect_uri,
         state=state,
         code_challenge=code_challenge,
-        scopes=SCOPES,
+        scopes=(*SCOPES, READ_SCOPE) if read else SCOPES,
         extra=extra,
     )
 
@@ -137,3 +145,61 @@ async def revoke(token: str) -> None:
             await client.post(google_oauth.REVOKE_URL, data={"token": token})
     except httpx.HTTPError:
         pass
+
+
+@dataclass(frozen=True)
+class MessageMeta:
+    id: str
+    thread_id: str | None
+    sender: str  # the From address, lowercased
+    subject: str
+    snippet: str  # Gmail's short preview, not the full body
+    received_at: datetime
+
+
+def _get(token: str, url: str, params: tuple[tuple[str, str], ...]) -> dict[str, Any]:
+    try:
+        resp = httpx.get(
+            url,
+            params=params,
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=20,
+        )
+    except httpx.TransportError as exc:
+        raise GmailSendError("Couldn't reach Gmail.", retryable=True) from exc
+    if resp.status_code == 401:
+        raise GmailAuthError("Gmail access token was rejected.")
+    if resp.status_code == 403:
+        raise GmailAuthError("Reading Gmail isn't allowed. Turn on reply detection again.")
+    if resp.status_code != 200:
+        raise GmailSendError(
+            f"Gmail failed ({resp.status_code}).", retryable=resp.status_code >= 429
+        )
+    data: dict[str, Any] = resp.json()
+    return data
+
+
+def search(token: str, query: str, limit: int = 50) -> list[str]:
+    """Message ids matching a Gmail search (e.g. "from:(a@x.com OR y.com) after:1700000000")."""
+    data = _get(token, MESSAGES_URL, (("q", query), ("maxResults", str(limit))))
+    return [str(m["id"]) for m in data.get("messages") or []]
+
+
+def message_meta(token: str, message_id: str) -> MessageMeta:
+    """Headers and Gmail's snippet only: the full message body is never downloaded."""
+    data = _get(
+        token,
+        f"{MESSAGES_URL}/{message_id}",
+        (("format", "metadata"), ("metadataHeaders", "From"), ("metadataHeaders", "Subject")),
+    )
+    headers = {
+        h["name"].lower(): h["value"] for h in (data.get("payload") or {}).get("headers", [])
+    }
+    return MessageMeta(
+        id=str(data["id"]),
+        thread_id=data.get("threadId"),
+        sender=parseaddr(headers.get("from", ""))[1].lower(),
+        subject=headers.get("subject", "")[:300],
+        snippet=html.unescape(str(data.get("snippet") or ""))[:500],
+        received_at=datetime.fromtimestamp(int(data.get("internalDate", 0)) / 1000, UTC),
+    )

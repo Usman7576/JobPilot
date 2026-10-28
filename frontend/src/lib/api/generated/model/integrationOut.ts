@@ -15,4 +15,7 @@ export interface IntegrationOut {
   last_error?: string | null;
   last_sync_at?: string | null;
   spreadsheet_url?: string | null;
+  can_read?: boolean;
+  reply_detection?: boolean;
+  replies_checked_at?: string | null;
 }
