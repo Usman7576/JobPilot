@@ -26,6 +26,7 @@ from app.models.enums import (
     Recommendation,
     SearchKind,
     SearchStatus,
+    SearchTrigger,
     SourceRunStatus,
 )
 from app.providers.embeddings import get_embeddings
@@ -151,7 +152,26 @@ def run_search(session: Session, run_id: uuid.UUID) -> SearchStatus | None:
     run.finished_at = datetime.now(UTC)
     session.commit()
     log.info("search_run_finished", run_id=str(run.id), status=run.status.value, **counts)
+    from app.services.sheets_service import request_sync
+
+    request_sync(run.user_id)  # new jobs for the tracker sheet
+    if run.trigger == SearchTrigger.SCHEDULED and run.status in (
+        SearchStatus.COMPLETED,
+        SearchStatus.PARTIAL,
+    ):
+        _digest(session, run)
     return run.status
+
+
+def _digest(session: Session, run: SearchRun) -> None:
+    """The daily email; a mail problem never fails the search."""
+    from app.services.schedule_service import send_digest
+
+    try:
+        send_digest(session, run)
+    except Exception as exc:
+        session.rollback()
+        log.warning("digest_failed", error_type=type(exc).__name__)
 
 
 def _scrape_source(

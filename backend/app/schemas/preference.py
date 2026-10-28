@@ -4,7 +4,7 @@ from typing import Annotated
 
 from pydantic import Field, StringConstraints, field_validator
 
-from app.models.enums import RemoteType, Seniority
+from app.models.enums import RemoteType, SearchKind, Seniority
 from app.schemas.common import ApiModel
 
 Term = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
@@ -48,6 +48,9 @@ class PreferencesBase(ApiModel):
     results_per_source: int = Field(default=30, ge=5, le=100)
     daily_search_enabled: bool = False
     daily_search_hour: int = Field(default=8, ge=0, le=23)
+    daily_search_kinds: list[SearchKind] = Field(
+        default_factory=lambda: [SearchKind.JOBS], min_length=1, max_length=2
+    )
     digest_enabled: bool = True
     digest_min_score: int = Field(default=80, ge=0, le=100)
 

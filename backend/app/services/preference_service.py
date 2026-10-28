@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
 from app.models import Preference, User
-from app.models.enums import OnboardingStep
+from app.models.enums import OnboardingStep, SearchKind
 from app.providers.sources import all_sources, default_source_names
 from app.schemas.preference import PreferencesIn, PreferencesOut, SourceOut
 from app.services import source_guard
@@ -34,6 +34,7 @@ def _to_out(pref: Preference | None, defaults: dict[str, Any]) -> PreferencesOut
         results_per_source=pref.results_per_source,
         daily_search_enabled=pref.daily_search_enabled,
         daily_search_hour=pref.daily_search_hour,
+        daily_search_kinds=[SearchKind(k) for k in pref.daily_search_kinds],
         digest_enabled=pref.digest_enabled,
         digest_min_score=pref.digest_min_score,
         is_saved=True,

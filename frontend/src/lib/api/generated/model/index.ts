@@ -39,7 +39,7 @@ export * from './healthOutChecks';
 export * from './hTTPValidationError';
 export * from './integrationOut';
 export * from './integrationProvider';
-export * from './integrationsGmailCallbackParams';
+export * from './integrationsCallbackParams';
 export * from './integrationsOut';
 export * from './integrationsOutSendBackend';
 export * from './integrationStatus';

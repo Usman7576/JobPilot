@@ -13,10 +13,13 @@ class IntegrationOut(ApiModel):
     google_email: str | None
     connected_at: datetime | None = None
     last_error: str | None = None
+    last_sync_at: datetime | None = None
+    spreadsheet_url: str | None = None  # sheets only
 
 
 class IntegrationsOut(ApiModel):
     gmail: IntegrationOut
+    sheets: IntegrationOut
     google_configured: bool  # GOOGLE_CLIENT_ID/SECRET are set
     # smtp = local test mode: applications go to Mailpit, not to real recipients
     send_backend: Literal["gmail", "smtp"]

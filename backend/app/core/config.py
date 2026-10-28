@@ -137,6 +137,10 @@ class Settings(BaseSettings):
         return f"{self.app_base_url}/api/v1/integrations/gmail/callback"
 
     @property
+    def google_sheets_redirect_uri(self) -> str:
+        return f"{self.app_base_url}/api/v1/integrations/sheets/callback"
+
+    @property
     def google_login_enabled(self) -> bool:
         return bool(self.google_client_id and self.google_client_secret)
 

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -21,6 +21,7 @@ from app.providers.llm.base import (
 )
 
 REQUEST_TIMEOUT_MS = 90_000
+OVERLOAD_REST = timedelta(minutes=10)
 
 
 def _today() -> date:
@@ -58,6 +59,9 @@ class GeminiProvider:
         # model -> UTC day its free daily quota ran out (so the rest of that day goes straight
         # to the fallback model).
         self._spent_today: dict[str, date] = {}
+        # model -> when to try it again after it was overloaded (each try costs up to the
+        # full timeout, so a busy model is skipped for a while instead of every request).
+        self._resting_until: dict[str, datetime] = {}
 
     def generate_json(
         self,
@@ -79,8 +83,12 @@ class GeminiProvider:
             response_json_schema=schema,
         )
         fallback = self._models["fast"]
-        if model != fallback and self._spent_today.get(model) == _today():
-            model = fallback  # its free daily quota is used up: don't waste a request asking
+        now = datetime.now(UTC)
+        if model != fallback and (
+            self._spent_today.get(model) == now.date()  # free daily quota used up
+            or self._resting_until.get(model, now) > now  # overloaded a few minutes ago
+        ):
+            model = fallback
         try:
             response = self._call(model, user, config)
         except (_Overloaded, LLMQuotaExhausted) as exc:
@@ -90,6 +98,8 @@ class GeminiProvider:
                 raise
             if isinstance(exc, LLMQuotaExhausted):
                 self._spent_today[model] = _today()
+            else:
+                self._resting_until[model] = now + OVERLOAD_REST
             model = fallback
             response = self._call(model, user, config)
 

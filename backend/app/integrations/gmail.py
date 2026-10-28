@@ -64,7 +64,7 @@ def consent_url(state: str, code_challenge: str, login_hint: str | None = None) 
     )
 
 
-def _tokens(payload: dict[str, Any], refresh_token: str | None = None) -> Tokens:
+def parse_tokens(payload: dict[str, Any], refresh_token: str | None = None) -> Tokens:
     return Tokens(
         access_token=str(payload["access_token"]),
         refresh_token=str(payload.get("refresh_token") or refresh_token or "") or None,
@@ -79,7 +79,7 @@ async def exchange(code: str, code_verifier: str) -> Tokens:
         redirect_uri=get_settings().google_gmail_redirect_uri,
         code_verifier=code_verifier,
     )
-    tokens = _tokens(payload)
+    tokens = parse_tokens(payload)
     if SEND_SCOPE not in tokens.scopes:
         raise GmailAuthError("Permission to send email wasn't granted.")
     return tokens
@@ -104,7 +104,7 @@ def refresh(refresh_token: str) -> Tokens:
         raise GmailAuthError("Gmail access expired or was revoked. Reconnect Gmail.")
     if resp.status_code != 200:
         raise GmailSendError(f"Google token refresh failed ({resp.status_code}).", retryable=True)
-    return _tokens(resp.json(), refresh_token)
+    return parse_tokens(resp.json(), refresh_token)
 
 
 def send_raw(access_token: str, mime: bytes) -> Sent:

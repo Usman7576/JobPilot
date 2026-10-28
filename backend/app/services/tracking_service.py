@@ -41,7 +41,7 @@ from app.schemas.tracking import (
     StatCards,
     WeekPoint,
 )
-from app.services import application_service, job_service
+from app.services import application_service, job_service, sheets_service
 from app.services.application_events import record_event
 
 S = ApplicationStatus
@@ -170,6 +170,8 @@ async def move(db: AsyncSession, user: User, application_id: uuid.UUID, body: Mo
     app.kanban_position = await _position(db, user, body)
     app.updated_at = now
     await db.commit()
+    if target != previous:
+        sheets_service.request_sync(user.id)
     return (await _cards(db, user, app.id))[0]
 
 
@@ -205,6 +207,7 @@ async def follow_up_sent(db: AsyncSession, user: User, application_id: uuid.UUID
         from_status=app.status,
     )  # fmt: skip
     await db.commit()
+    sheets_service.request_sync(user.id)
     return (await _cards(db, user, app.id))[0]
 
 

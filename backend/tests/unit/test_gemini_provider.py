@@ -82,3 +82,14 @@ def test_spent_daily_quota_moves_to_the_fast_model_for_the_day() -> None:
     assert provider.generate_json(_prompt(), schema={}, tier="smart").model == "fast-model"
     # The second request didn't waste a call on the exhausted model.
     assert models.calls == ["smart-model", "fast-model", "fast-model"]
+
+
+def test_overloaded_model_rests_for_a_while() -> None:
+    provider, models = _provider(slow={"smart-model"})
+    provider.generate_json(_prompt(), schema={}, tier="smart")
+    provider.generate_json(_prompt(), schema={}, tier="smart")
+    # The second request skips the slow model instead of waiting for another timeout.
+    assert models.calls == ["smart-model", "fast-model", "fast-model"]
+    provider._resting_until.clear()
+    provider.generate_json(_prompt(), schema={}, tier="smart")
+    assert models.calls[-2:] == ["smart-model", "fast-model"]  # tried again after the rest

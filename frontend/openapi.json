@@ -2313,14 +2313,24 @@
         }
       }
     },
-    "/api/v1/integrations/gmail/connect": {
+    "/api/v1/integrations/{provider}/connect": {
       "get": {
         "tags": [
           "integrations"
         ],
-        "summary": "Connect Gmail",
-        "description": "Returns Google's consent URL; the browser goes there, then back to /gmail/callback.",
-        "operationId": "integrations_connect_gmail",
+        "summary": "Connect",
+        "description": "Returns Google's consent URL; the browser goes there, then back to the callback.",
+        "operationId": "integrations_connect",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IntegrationProvider"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2331,18 +2341,36 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         }
       }
     },
-    "/api/v1/integrations/gmail/callback": {
+    "/api/v1/integrations/{provider}/callback": {
       "get": {
         "tags": [
           "integrations"
         ],
-        "summary": "Gmail Callback",
-        "operationId": "integrations_gmail_callback",
+        "summary": "Callback",
+        "operationId": "integrations_callback",
         "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/IntegrationProvider"
+            }
+          },
           {
             "name": "code",
             "in": "query",
@@ -2403,6 +2431,26 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/integrations/sheets/sync": {
+      "post": {
+        "tags": [
+          "integrations"
+        ],
+        "summary": "Sync Sheets",
+        "description": "Rewrite the tracker sheet now (it also updates itself a few minutes after changes).",
+        "operationId": "integrations_sync_sheets",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -3698,6 +3746,29 @@
               }
             ],
             "title": "Last Error"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At"
+          },
+          "spreadsheet_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spreadsheet Url"
           }
         },
         "additionalProperties": false,
@@ -3732,6 +3803,9 @@
           "gmail": {
             "$ref": "#/components/schemas/IntegrationOut"
           },
+          "sheets": {
+            "$ref": "#/components/schemas/IntegrationOut"
+          },
           "google_configured": {
             "type": "boolean",
             "title": "Google Configured"
@@ -3749,6 +3823,7 @@
         "type": "object",
         "required": [
           "gmail",
+          "sheets",
           "google_configured",
           "send_backend"
         ],
@@ -4849,6 +4924,15 @@
             "title": "Daily Search Hour",
             "default": 8
           },
+          "daily_search_kinds": {
+            "items": {
+              "$ref": "#/components/schemas/SearchKind"
+            },
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Daily Search Kinds"
+          },
           "digest_enabled": {
             "type": "boolean",
             "title": "Digest Enabled",
@@ -4984,6 +5068,15 @@
             "minimum": 0.0,
             "title": "Daily Search Hour",
             "default": 8
+          },
+          "daily_search_kinds": {
+            "items": {
+              "$ref": "#/components/schemas/SearchKind"
+            },
+            "type": "array",
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Daily Search Kinds"
           },
           "digest_enabled": {
             "type": "boolean",

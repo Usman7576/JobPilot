@@ -44,6 +44,10 @@ class Preference(Timestamps, Base):
         Boolean, default=False, server_default="false"
     )
     daily_search_hour: Mapped[int] = mapped_column(SmallInteger, default=8, server_default="8")
+    # "jobs" and/or "internships": what the daily search looks for.
+    daily_search_kinds: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), default=lambda: ["jobs"], server_default="{jobs}"
+    )
     digest_enabled: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     digest_min_score: Mapped[int] = mapped_column(SmallInteger, default=80, server_default="80")
     stage1_top_n: Mapped[int | None] = mapped_column(SmallInteger)

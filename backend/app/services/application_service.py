@@ -36,6 +36,7 @@ from app.schemas.application import (
     RegenerateIn,
 )
 from app.schemas.profile import ResumeProfile
+from app.services import sheets_service
 from app.services.application_events import record_event
 
 log = get_logger(__name__)
@@ -460,6 +461,7 @@ async def mark_applied(
     reason = "Applied on the company site" if channel == "site" else "Sent from your own inbox"
     record_event(db, app, ApplicationStatus.APPLIED, EventActor.USER, reason, from_status=previous)
     await db.commit()
+    sheets_service.request_sync(user.id)
     await db.refresh(app)
     return await to_out(db, app)
 

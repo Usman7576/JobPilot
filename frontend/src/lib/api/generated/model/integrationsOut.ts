@@ -9,6 +9,7 @@ import type { IntegrationsOutSendBackend } from './integrationsOutSendBackend';
 
 export interface IntegrationsOut {
   gmail: IntegrationOut;
+  sheets: IntegrationOut;
   google_configured: boolean;
   send_backend: IntegrationsOutSendBackend;
 }

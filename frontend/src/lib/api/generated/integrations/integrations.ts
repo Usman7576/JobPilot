@@ -27,7 +27,7 @@ import type {
   ConnectOut,
   HTTPValidationError,
   IntegrationProvider,
-  IntegrationsGmailCallbackParams,
+  IntegrationsCallbackParams,
   IntegrationsOut
 } from '../model';
 
@@ -154,21 +154,21 @@ export function useIntegrationsListIntegrations<TData = Awaited<ReturnType<typeo
 
 
 
-export const getIntegrationsConnectGmailUrl = () => {
+export const getIntegrationsConnectUrl = (provider: IntegrationProvider,) => {
 
 
 
 
-  return `/api/v1/integrations/gmail/connect`
+  return `/api/v1/integrations/${provider}/connect`
 }
 
 /**
- * Returns Google's consent URL; the browser goes there, then back to /gmail/callback.
- * @summary Connect Gmail
+ * Returns Google's consent URL; the browser goes there, then back to the callback.
+ * @summary Connect
  */
-export const integrationsConnectGmail = async ( options?: Parameters<typeof customFetch>[1]): Promise<ConnectOut> => {
+export const integrationsConnect = async (provider: IntegrationProvider, options?: Parameters<typeof customFetch>[1]): Promise<ConnectOut> => {
 
-  return customFetch<ConnectOut>(getIntegrationsConnectGmailUrl(),
+  return customFetch<ConnectOut>(getIntegrationsConnectUrl(provider),
   {
     ...options,
     method: 'GET'
@@ -181,69 +181,69 @@ export const integrationsConnectGmail = async ( options?: Parameters<typeof cust
 
 
 
-export const getIntegrationsConnectGmailQueryKey = () => {
+export const getIntegrationsConnectQueryKey = (provider: IntegrationProvider,) => {
     return [
-    `/api/v1/integrations/gmail/connect`
+    `/api/v1/integrations/${provider}/connect`
     ] as const;
     }
 
 
-export const getIntegrationsConnectGmailQueryOptions = <TData = Awaited<ReturnType<typeof integrationsConnectGmail>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnectGmail>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+export const getIntegrationsConnectQueryOptions = <TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(provider: IntegrationProvider, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getIntegrationsConnectGmailQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getIntegrationsConnectQueryKey(provider);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof integrationsConnectGmail>>> = ({ signal }) => integrationsConnectGmail({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof integrationsConnect>>> = ({ signal }) => integrationsConnect(provider, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof integrationsConnectGmail>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: provider !== null && provider !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type IntegrationsConnectGmailQueryResult = NonNullable<Awaited<ReturnType<typeof integrationsConnectGmail>>>
-export type IntegrationsConnectGmailQueryError = ErrorType<unknown>
+export type IntegrationsConnectQueryResult = NonNullable<Awaited<ReturnType<typeof integrationsConnect>>>
+export type IntegrationsConnectQueryError = ErrorType<HTTPValidationError>
 
 
-export function useIntegrationsConnectGmail<TData = Awaited<ReturnType<typeof integrationsConnectGmail>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnectGmail>>, TError, TData>> & Pick<
+export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(
+ provider: IntegrationProvider, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof integrationsConnectGmail>>,
+          Awaited<ReturnType<typeof integrationsConnect>>,
           TError,
-          Awaited<ReturnType<typeof integrationsConnectGmail>>
+          Awaited<ReturnType<typeof integrationsConnect>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useIntegrationsConnectGmail<TData = Awaited<ReturnType<typeof integrationsConnectGmail>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnectGmail>>, TError, TData>> & Pick<
+export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(
+ provider: IntegrationProvider, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof integrationsConnectGmail>>,
+          Awaited<ReturnType<typeof integrationsConnect>>,
           TError,
-          Awaited<ReturnType<typeof integrationsConnectGmail>>
+          Awaited<ReturnType<typeof integrationsConnect>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useIntegrationsConnectGmail<TData = Awaited<ReturnType<typeof integrationsConnectGmail>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnectGmail>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(
+ provider: IntegrationProvider, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Connect Gmail
+ * @summary Connect
  */
 
-export function useIntegrationsConnectGmail<TData = Awaited<ReturnType<typeof integrationsConnectGmail>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnectGmail>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+export function useIntegrationsConnect<TData = Awaited<ReturnType<typeof integrationsConnect>>, TError = ErrorType<HTTPValidationError>>(
+ provider: IntegrationProvider, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsConnect>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getIntegrationsConnectGmailQueryOptions(options)
+  const queryOptions = getIntegrationsConnectQueryOptions(provider,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -255,7 +255,8 @@ export function useIntegrationsConnectGmail<TData = Awaited<ReturnType<typeof in
 
 
 
-export const getIntegrationsGmailCallbackUrl = (params?: IntegrationsGmailCallbackParams,) => {
+export const getIntegrationsCallbackUrl = (provider: IntegrationProvider,
+    params?: IntegrationsCallbackParams,) => {
   const normalizedParams = new URLSearchParams();
 
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -267,15 +268,16 @@ export const getIntegrationsGmailCallbackUrl = (params?: IntegrationsGmailCallba
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/v1/integrations/gmail/callback?${stringifiedParams}` : `/api/v1/integrations/gmail/callback`
+  return stringifiedParams.length > 0 ? `/api/v1/integrations/${provider}/callback?${stringifiedParams}` : `/api/v1/integrations/${provider}/callback`
 }
 
 /**
- * @summary Gmail Callback
+ * @summary Callback
  */
-export const integrationsGmailCallback = async (params?: IntegrationsGmailCallbackParams, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+export const integrationsCallback = async (provider: IntegrationProvider,
+    params?: IntegrationsCallbackParams, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
 
-  return customFetch<unknown>(getIntegrationsGmailCallbackUrl(params),
+  return customFetch<unknown>(getIntegrationsCallbackUrl(provider,params),
   {
     ...options,
     method: 'GET'
@@ -288,69 +290,75 @@ export const integrationsGmailCallback = async (params?: IntegrationsGmailCallba
 
 
 
-export const getIntegrationsGmailCallbackQueryKey = (params?: IntegrationsGmailCallbackParams,) => {
+export const getIntegrationsCallbackQueryKey = (provider: IntegrationProvider,
+    params?: IntegrationsCallbackParams,) => {
     return [
-    `/api/v1/integrations/gmail/callback`, ...(params ? [params] : [])
+    `/api/v1/integrations/${provider}/callback`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getIntegrationsGmailCallbackQueryOptions = <TData = Awaited<ReturnType<typeof integrationsGmailCallback>>, TError = ErrorType<void | HTTPValidationError>>(params?: IntegrationsGmailCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsGmailCallback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+export const getIntegrationsCallbackQueryOptions = <TData = Awaited<ReturnType<typeof integrationsCallback>>, TError = ErrorType<void | HTTPValidationError>>(provider: IntegrationProvider,
+    params?: IntegrationsCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsCallback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getIntegrationsGmailCallbackQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getIntegrationsCallbackQueryKey(provider,params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof integrationsGmailCallback>>> = ({ signal }) => integrationsGmailCallback(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof integrationsCallback>>> = ({ signal }) => integrationsCallback(provider,params, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof integrationsGmailCallback>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, enabled: provider !== null && provider !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof integrationsCallback>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type IntegrationsGmailCallbackQueryResult = NonNullable<Awaited<ReturnType<typeof integrationsGmailCallback>>>
-export type IntegrationsGmailCallbackQueryError = ErrorType<void | HTTPValidationError>
+export type IntegrationsCallbackQueryResult = NonNullable<Awaited<ReturnType<typeof integrationsCallback>>>
+export type IntegrationsCallbackQueryError = ErrorType<void | HTTPValidationError>
 
 
-export function useIntegrationsGmailCallback<TData = Awaited<ReturnType<typeof integrationsGmailCallback>>, TError = ErrorType<void | HTTPValidationError>>(
- params: undefined |  IntegrationsGmailCallbackParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsGmailCallback>>, TError, TData>> & Pick<
+export function useIntegrationsCallback<TData = Awaited<ReturnType<typeof integrationsCallback>>, TError = ErrorType<void | HTTPValidationError>>(
+ provider: IntegrationProvider,
+    params: undefined |  IntegrationsCallbackParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsCallback>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof integrationsGmailCallback>>,
+          Awaited<ReturnType<typeof integrationsCallback>>,
           TError,
-          Awaited<ReturnType<typeof integrationsGmailCallback>>
+          Awaited<ReturnType<typeof integrationsCallback>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useIntegrationsGmailCallback<TData = Awaited<ReturnType<typeof integrationsGmailCallback>>, TError = ErrorType<void | HTTPValidationError>>(
- params?: IntegrationsGmailCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsGmailCallback>>, TError, TData>> & Pick<
+export function useIntegrationsCallback<TData = Awaited<ReturnType<typeof integrationsCallback>>, TError = ErrorType<void | HTTPValidationError>>(
+ provider: IntegrationProvider,
+    params?: IntegrationsCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsCallback>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof integrationsGmailCallback>>,
+          Awaited<ReturnType<typeof integrationsCallback>>,
           TError,
-          Awaited<ReturnType<typeof integrationsGmailCallback>>
+          Awaited<ReturnType<typeof integrationsCallback>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useIntegrationsGmailCallback<TData = Awaited<ReturnType<typeof integrationsGmailCallback>>, TError = ErrorType<void | HTTPValidationError>>(
- params?: IntegrationsGmailCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsGmailCallback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+export function useIntegrationsCallback<TData = Awaited<ReturnType<typeof integrationsCallback>>, TError = ErrorType<void | HTTPValidationError>>(
+ provider: IntegrationProvider,
+    params?: IntegrationsCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsCallback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Gmail Callback
+ * @summary Callback
  */
 
-export function useIntegrationsGmailCallback<TData = Awaited<ReturnType<typeof integrationsGmailCallback>>, TError = ErrorType<void | HTTPValidationError>>(
- params?: IntegrationsGmailCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsGmailCallback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+export function useIntegrationsCallback<TData = Awaited<ReturnType<typeof integrationsCallback>>, TError = ErrorType<void | HTTPValidationError>>(
+ provider: IntegrationProvider,
+    params?: IntegrationsCallbackParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof integrationsCallback>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getIntegrationsGmailCallbackQueryOptions(params,options)
+  const queryOptions = getIntegrationsCallbackQueryOptions(provider,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -362,7 +370,81 @@ export function useIntegrationsGmailCallback<TData = Awaited<ReturnType<typeof i
 
 
 
-export const getIntegrationsDisconnectUrl = (provider: IntegrationProvider,) => {
+export const getIntegrationsSyncSheetsUrl = () => {
+
+
+
+
+  return `/api/v1/integrations/sheets/sync`
+}
+
+/**
+ * Rewrite the tracker sheet now (it also updates itself a few minutes after changes).
+ * @summary Sync Sheets
+ */
+export const integrationsSyncSheets = async ( options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getIntegrationsSyncSheetsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getIntegrationsSyncSheetsMutationKey = () => ['integrationsSyncSheets'] as const;
+
+export const getIntegrationsSyncSheetsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof integrationsSyncSheets>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof integrationsSyncSheets>>, TError,void, TContext> => {
+
+const mutationKey = getIntegrationsSyncSheetsMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof integrationsSyncSheets>>, void> = () => {
+
+
+          return  integrationsSyncSheets(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IntegrationsSyncSheetsMutationResult = NonNullable<Awaited<ReturnType<typeof integrationsSyncSheets>>>
+
+    export type IntegrationsSyncSheetsMutationError = ErrorType<unknown>
+
+
+    /**
+ * @summary Sync Sheets
+ */
+export const useIntegrationsSyncSheets = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof integrationsSyncSheets>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof integrationsSyncSheets>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getIntegrationsSyncSheetsMutationOptions(options), queryClient);
+    }
+    export const getIntegrationsDisconnectUrl = (provider: IntegrationProvider,) => {
 
 
 

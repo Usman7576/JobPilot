@@ -5,7 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type IntegrationsGmailCallbackParams = {
+export type IntegrationsCallbackParams = {
 code?: string | null;
 state?: string | null;
 error?: string | null;

@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { PageHeader } from "@/components/common/page-header";
 import { PreferencesForm } from "@/components/preferences/preferences-form";
 import { GmailCard } from "@/components/settings/gmail-card";
+import { ScheduleCard } from "@/components/settings/schedule-card";
+import { SheetsCard } from "@/components/settings/sheets-card";
 
 import { AccountSettings } from "./account-settings";
 
@@ -26,6 +28,15 @@ export default function SettingsPage() {
           <Suspense>
             <GmailCard />
           </Suspense>
+          <Suspense>
+            <SheetsCard />
+          </Suspense>
+        </section>
+        <section className="grid gap-4">
+          <div className="grid gap-1">
+            <h2 className="text-lg font-semibold">Schedule</h2>
+          </div>
+          <ScheduleCard />
         </section>
         <section className="grid gap-4">
           <div className="grid gap-1">

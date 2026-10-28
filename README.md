@@ -101,6 +101,12 @@ uv run --env-file ../.env --env-file .env.host uvicorn app.main:app --port 8000 
 uv run --env-file ../.env --env-file .env.host celery -A app.tasks.celery_app worker -P solo -Q default,scrape,llm,email,sync -l info
 ```
 
+Optional, for daily searches and digest emails (a small scheduler process):
+
+```bash
+uv run --env-file ../.env --env-file .env.host celery -A app.tasks.celery_app beat -l info -s ../data/celerybeat-schedule
+```
+
 ## Google sign-in (optional, free)
 
 1. In [Google Cloud Console](https://console.cloud.google.com/) create a project, configure the

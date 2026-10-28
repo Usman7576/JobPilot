@@ -17,6 +17,8 @@ celery_app = Celery(
         "app.tasks.resume_tasks",
         "app.tasks.matching_tasks",
         "app.tasks.application_tasks",
+        "app.tasks.schedule_tasks",
+        "app.tasks.sheets_tasks",
         "app.tasks.search_tasks",
     ],
 )
@@ -50,6 +52,10 @@ celery_app.conf.update(
         "worker-heartbeat": {
             "task": "app.tasks.maintenance_tasks.heartbeat",
             "schedule": 60.0,
+        },
+        "daily-searches": {
+            "task": "app.tasks.schedule_tasks.dispatch_daily_searches",
+            "schedule": 600.0,
         },
     },
 )

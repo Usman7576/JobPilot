@@ -25,6 +25,9 @@ class SmtpMailer:
     async def send(self, mail: OutgoingMail) -> None:
         await asyncio.to_thread(self._send_sync, mail)
 
+    def send_sync(self, mail: OutgoingMail) -> None:
+        self._send_sync(mail)
+
     @retry(
         retry=retry_if_exception_type((smtplib.SMTPException, OSError)),
         stop=stop_after_attempt(3),

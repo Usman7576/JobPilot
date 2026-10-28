@@ -6,6 +6,7 @@
  */
 import type { PreferredLocation } from './preferredLocation';
 import type { RemoteType } from './remoteType';
+import type { SearchKind } from './searchKind';
 import type { Seniority } from './seniority';
 
 export interface PreferencesIn {
@@ -62,6 +63,11 @@ export interface PreferencesIn {
      * @maximum 23
      */
   daily_search_hour?: number;
+  /**
+     * @minItems 1
+     * @maxItems 2
+     */
+  daily_search_kinds?: SearchKind[];
   digest_enabled?: boolean;
   /**
      * @minimum 0

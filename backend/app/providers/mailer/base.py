@@ -19,3 +19,7 @@ class Mailer(Protocol):
     """
 
     async def send(self, mail: OutgoingMail) -> None: ...
+
+    def send_sync(self, mail: OutgoingMail) -> None:
+        """For Celery workers (digests): same mail, no event loop needed."""
+        ...

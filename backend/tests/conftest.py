@@ -45,7 +45,7 @@ from app.db.session import async_session_factory  # noqa: E402
 from app.main import app  # noqa: E402
 from app.providers.llm import set_llm_override  # noqa: E402
 from app.providers.llm.fake import FakeLLM  # noqa: E402
-from app.providers.mailer import OutgoingMail, get_mailer  # noqa: E402
+from app.providers.mailer import OutgoingMail, get_mailer, set_mailer_override  # noqa: E402
 from app.providers.storage import LocalStorage, set_storage_override  # noqa: E402
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -56,6 +56,9 @@ class FakeMailer:
         self.sent: list[OutgoingMail] = []
 
     async def send(self, mail: OutgoingMail) -> None:
+        self.sent.append(mail)
+
+    def send_sync(self, mail: OutgoingMail) -> None:
         self.sent.append(mail)
 
     def last_link(self) -> str:
@@ -97,7 +100,9 @@ def clean_tables(migrated_database: None) -> Iterator[None]:
 def mailer() -> Iterator[FakeMailer]:
     fake = FakeMailer()
     app.dependency_overrides[get_mailer] = lambda: fake
+    set_mailer_override(fake)
     yield fake
+    set_mailer_override(None)
     app.dependency_overrides.pop(get_mailer, None)
 
 

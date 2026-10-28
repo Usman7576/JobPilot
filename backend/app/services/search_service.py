@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.core.errors import AppError, Conflict, NotFound, ServiceUnavailable
 from app.core.logging import get_logger
+from app.db.base import uuid7
 from app.models import JobMatch, Preference, SearchRun, SearchRunSource, User, UserJob
 from app.models.enums import MatchStage, SearchKind, SearchStatus, SearchTrigger, SourceRunStatus
 from app.providers.sources import all_sources
@@ -62,6 +63,29 @@ async def estimate(db: AsyncSession, user: User) -> ScoreEstimate:
         requests_left_today=left,
         has_resume=True,
     )
+
+
+def new_run(
+    pref: Preference, kind: SearchKind, trigger: SearchTrigger
+) -> tuple[SearchRun, list[SearchRunSource]]:
+    """A queued run (and its per-source rows) from the saved preferences; not added yet."""
+    snapshot = {
+        "kind": kind.value,
+        "target_titles": pref.target_titles,
+        "locations": pref.locations,
+        "remote_types": pref.remote_types,
+        "posted_within_days": pref.posted_within_days,
+        "results_per_source": pref.results_per_source,
+        "sources": pref.sources,
+    }
+    run = SearchRun(
+        id=uuid7(), user_id=pref.user_id, trigger=trigger, query_snapshot=snapshot, counts={}
+    )
+    rows = [
+        SearchRunSource(run_id=run.id, source=name, status=SourceRunStatus.PENDING)
+        for name in pref.sources
+    ]
+    return run, rows
 
 
 class SearchNotReady(AppError):
@@ -139,20 +163,10 @@ async def start(
     if current is not None:
         raise Conflict("A search is already running.", run_id=str(current.id))
 
-    snapshot = {
-        "kind": kind.value,
-        "target_titles": pref.target_titles,
-        "locations": pref.locations,
-        "remote_types": pref.remote_types,
-        "posted_within_days": pref.posted_within_days,
-        "results_per_source": pref.results_per_source,
-        "sources": pref.sources,
-    }
-    run = SearchRun(user_id=user.id, trigger=trigger, query_snapshot=snapshot, counts={})
+    run, rows = new_run(pref, kind, trigger)
     db.add(run)
     await db.flush()
-    for name in pref.sources:
-        db.add(SearchRunSource(run_id=run.id, source=name, status=SourceRunStatus.PENDING))
+    db.add_all(rows)
     await db.commit()
     await db.refresh(run)
 

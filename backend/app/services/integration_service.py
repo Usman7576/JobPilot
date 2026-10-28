@@ -1,4 +1,4 @@
-"""Connected Google services (Gmail now, Sheets in Phase 7). Tokens are stored encrypted."""
+"""Connected Google services (Gmail, Sheets). Tokens are stored encrypted."""
 
 from __future__ import annotations
 
@@ -44,6 +44,8 @@ def to_out(provider: IntegrationProvider, row: Integration | None) -> Integratio
         google_email=row.google_email,
         connected_at=row.created_at if row.status == IntegrationStatus.CONNECTED else None,
         last_error=row.last_error,
+        last_sync_at=row.last_sync_at,
+        spreadsheet_url=(row.config or {}).get("spreadsheet_url"),
     )
 
 
@@ -51,16 +53,21 @@ async def overview(db: AsyncSession, user: User) -> IntegrationsOut:
     settings = get_settings()
     return IntegrationsOut(
         gmail=to_out(IntegrationProvider.GMAIL, await get(db, user.id, IntegrationProvider.GMAIL)),
+        sheets=to_out(
+            IntegrationProvider.SHEETS, await get(db, user.id, IntegrationProvider.SHEETS)
+        ),
         google_configured=settings.google_login_enabled,
         send_backend=settings.application_send_backend,
     )
 
 
-async def save_gmail(db: AsyncSession, user_id: uuid.UUID, tokens: gmail.Tokens) -> Integration:
+async def save(
+    db: AsyncSession, user_id: uuid.UUID, provider: IntegrationProvider, tokens: gmail.Tokens
+) -> Integration:
     info = await google_oauth.fetch_userinfo(tokens.access_token)
-    row = await get(db, user_id, IntegrationProvider.GMAIL)
+    row = await get(db, user_id, provider)
     if row is None:
-        row = Integration(user_id=user_id, provider=IntegrationProvider.GMAIL)
+        row = Integration(user_id=user_id, provider=provider)
         db.add(row)
     row.status = IntegrationStatus.CONNECTED
     row.google_email = info.email
@@ -70,7 +77,7 @@ async def save_gmail(db: AsyncSession, user_id: uuid.UUID, tokens: gmail.Tokens)
     row.token_expires_at = tokens.expires_at
     row.last_error = None
     await db.commit()
-    log.info("integration_connected", provider="gmail")
+    log.info("integration_connected", provider=provider.value)
     return row
 
 

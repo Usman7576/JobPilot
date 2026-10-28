@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getIntegrationsListIntegrationsQueryKey,
-  integrationsConnectGmail,
+  integrationsConnect,
   useIntegrationsDisconnect,
   useIntegrationsListIntegrations,
 } from "@/lib/api/generated/integrations/integrations";
@@ -51,7 +51,7 @@ export function GmailCard() {
   const connect = async () => {
     setConnecting(true);
     try {
-      const { url } = await integrationsConnectGmail();
+      const { url } = await integrationsConnect("gmail");
       window.location.assign(url);
     } catch (e) {
       toast.error(errorMessage(e));

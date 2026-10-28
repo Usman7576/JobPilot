@@ -13,4 +13,6 @@ export interface IntegrationOut {
   google_email: string | null;
   connected_at?: string | null;
   last_error?: string | null;
+  last_sync_at?: string | null;
+  spreadsheet_url?: string | null;
 }
