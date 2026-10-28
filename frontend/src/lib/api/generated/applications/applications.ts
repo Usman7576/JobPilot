@@ -32,6 +32,8 @@ import type {
   MarkAppliedIn,
   MoveIn,
   RegenerateIn,
+  SendIn,
+  SendQuotaOut,
   ToneIn,
   UseDraftIn
 } from '../model';
@@ -249,6 +251,107 @@ export function useApplicationsGetBoard<TData = Awaited<ReturnType<typeof applic
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getApplicationsGetBoardQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getApplicationsSendQuotaUrl = () => {
+
+
+
+
+  return `/api/v1/applications/send-quota`
+}
+
+/**
+ * Today's emails: your daily limit, sent, waiting in the queue, and how many are left.
+ * @summary Send Quota
+ */
+export const applicationsSendQuota = async ( options?: Parameters<typeof customFetch>[1]): Promise<SendQuotaOut> => {
+
+  return customFetch<SendQuotaOut>(getApplicationsSendQuotaUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getApplicationsSendQuotaQueryKey = () => {
+    return [
+    `/api/v1/applications/send-quota`
+    ] as const;
+    }
+
+
+export const getApplicationsSendQuotaQueryOptions = <TData = Awaited<ReturnType<typeof applicationsSendQuota>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsSendQuota>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getApplicationsSendQuotaQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof applicationsSendQuota>>> = ({ signal }) => applicationsSendQuota({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof applicationsSendQuota>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ApplicationsSendQuotaQueryResult = NonNullable<Awaited<ReturnType<typeof applicationsSendQuota>>>
+export type ApplicationsSendQuotaQueryError = ErrorType<unknown>
+
+
+export function useApplicationsSendQuota<TData = Awaited<ReturnType<typeof applicationsSendQuota>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsSendQuota>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof applicationsSendQuota>>,
+          TError,
+          Awaited<ReturnType<typeof applicationsSendQuota>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useApplicationsSendQuota<TData = Awaited<ReturnType<typeof applicationsSendQuota>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsSendQuota>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof applicationsSendQuota>>,
+          TError,
+          Awaited<ReturnType<typeof applicationsSendQuota>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useApplicationsSendQuota<TData = Awaited<ReturnType<typeof applicationsSendQuota>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsSendQuota>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Send Quota
+ */
+
+export function useApplicationsSendQuota<TData = Awaited<ReturnType<typeof applicationsSendQuota>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsSendQuota>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getApplicationsSendQuotaQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -1186,4 +1289,170 @@ export const useApplicationsFollowUpSent = <TError = ErrorType<HTTPValidationErr
         TContext
       > => {
       return useMutation(getApplicationsFollowUpSentMutationOptions(options), queryClient);
+    }
+    export const getApplicationsSendApplicationUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/v1/applications/${applicationId}/send`
+}
+
+/**
+ * Schedule the reviewed email to go from your Gmail in 30-120 s (cancellable until then).
+ *
+ * Needs `preview_confirmed: true` (set by the final preview) and an `Idempotency-Key`
+ * header; a retried request with the same key returns the same result.
+ * @summary Send Application
+ */
+export const applicationsSendApplication = async (applicationId: string,
+    sendIn: SendIn, options?: Parameters<typeof customFetch>[1]): Promise<ApplicationOut> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<ApplicationOut>(getApplicationsSendApplicationUrl(applicationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(sendIn)
+  }
+);}
+
+
+
+
+
+export const getApplicationsSendApplicationMutationKey = () => ['applicationsSendApplication'] as const;
+
+export const getApplicationsSendApplicationMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsSendApplication>>, TError,ApplicationsSendApplicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applicationsSendApplication>>, TError,ApplicationsSendApplicationMutationVariables, TContext> => {
+
+const mutationKey = getApplicationsSendApplicationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applicationsSendApplication>>, ApplicationsSendApplicationMutationVariables> = (props) => {
+          const {applicationId,data} = props ?? {};
+
+          return  applicationsSendApplication(applicationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplicationsSendApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof applicationsSendApplication>>>
+    export type ApplicationsSendApplicationMutationBody = BodyType<SendIn>
+    export type ApplicationsSendApplicationMutationError = ErrorType<HTTPValidationError>
+    export type ApplicationsSendApplicationMutationVariables = {applicationId: string;data: BodyType<SendIn>}
+
+    /**
+ * @summary Send Application
+ */
+export const useApplicationsSendApplication = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsSendApplication>>, TError,ApplicationsSendApplicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof applicationsSendApplication>>,
+        TError,
+        ApplicationsSendApplicationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApplicationsSendApplicationMutationOptions(options), queryClient);
+    }
+    export const getApplicationsCancelSendUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/v1/applications/${applicationId}/cancel-send`
+}
+
+/**
+ * Stop a scheduled email before it goes (it returns to Ready).
+ * @summary Cancel Send
+ */
+export const applicationsCancelSend = async (applicationId: string, options?: Parameters<typeof customFetch>[1]): Promise<ApplicationOut> => {
+
+  return customFetch<ApplicationOut>(getApplicationsCancelSendUrl(applicationId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getApplicationsCancelSendMutationKey = () => ['applicationsCancelSend'] as const;
+
+export const getApplicationsCancelSendMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsCancelSend>>, TError,ApplicationsCancelSendMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applicationsCancelSend>>, TError,ApplicationsCancelSendMutationVariables, TContext> => {
+
+const mutationKey = getApplicationsCancelSendMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applicationsCancelSend>>, ApplicationsCancelSendMutationVariables> = (props) => {
+          const {applicationId} = props ?? {};
+
+          return  applicationsCancelSend(applicationId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplicationsCancelSendMutationResult = NonNullable<Awaited<ReturnType<typeof applicationsCancelSend>>>
+
+    export type ApplicationsCancelSendMutationError = ErrorType<HTTPValidationError>
+    export type ApplicationsCancelSendMutationVariables = {applicationId: string}
+
+    /**
+ * @summary Cancel Send
+ */
+export const useApplicationsCancelSend = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsCancelSend>>, TError,ApplicationsCancelSendMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof applicationsCancelSend>>,
+        TError,
+        ApplicationsCancelSendMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApplicationsCancelSendMutationOptions(options), queryClient);
     }

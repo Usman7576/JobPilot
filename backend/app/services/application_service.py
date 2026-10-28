@@ -136,6 +136,7 @@ async def to_out(db: AsyncSession, app: Application) -> ApplicationOut:
         flags_blocked=any(d.blocked for d in current),
         flags_acknowledged=app.guardrail_flags_acknowledged_at is not None,
         sent_at=app.sent_at,
+        scheduled_send_at=app.scheduled_send_at if app.status == ApplicationStatus.QUEUED else None,
         follow_up_at=app.follow_up_at,
         last_error=app.last_error,
         notes=app.notes,
@@ -259,6 +260,8 @@ async def _start_writing(
 ) -> ApplicationOut:
     if app.status in DONE:
         raise AlreadyApplied("You've already applied to this job.")
+    if app.status == ApplicationStatus.QUEUED:
+        raise Conflict("Cancel the scheduled send before rewriting.")
     if _is_generating(app):
         raise Conflict("Drafts for this job are already being written.")
     previous = app.status
@@ -362,7 +365,7 @@ async def patch(
     db: AsyncSession, user: User, application_id: uuid.UUID, body: ApplicationPatch
 ) -> ApplicationOut:
     app = await get_owned(db, user, application_id)
-    if app.status in DONE or _is_generating(app):
+    if app.status in DONE or app.status == ApplicationStatus.QUEUED or _is_generating(app):
         raise Conflict("This application can't be edited right now.")
     if body.email_body is not None or body.subject is not None:
         draft = await _latest(db, app.id, DraftKind.EMAIL)
@@ -449,6 +452,8 @@ async def mark_applied(
     app = await get_owned(db, user, application_id)
     if app.status in DONE:
         raise AlreadyApplied("Already marked as applied.")
+    if app.status == ApplicationStatus.QUEUED:
+        raise Conflict("This email is scheduled to send. Cancel it first.")
     out = await to_out(db, app)
     if out.flags_blocked and app.guardrail_flags_acknowledged_at is None:
         raise FlagsNotAcknowledged("Fix or confirm the flagged claims before marking as applied.")
@@ -467,6 +472,10 @@ async def mark_applied(
 
 
 async def delete(db: AsyncSession, user: User, application_id: uuid.UUID) -> None:
+    from app.services import send_service
+
     app = await get_owned(db, user, application_id)
+    task_id = app.send_task_id if app.status == ApplicationStatus.QUEUED else None
     await db.delete(app)
     await db.commit()
+    send_service.revoke(task_id)

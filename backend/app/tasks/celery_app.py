@@ -21,6 +21,7 @@ celery_app = Celery(
         "app.tasks.sheets_tasks",
         "app.tasks.account_tasks",
         "app.tasks.reply_tasks",
+        "app.tasks.email_tasks",
         "app.tasks.search_tasks",
     ],
 )

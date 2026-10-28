@@ -33,6 +33,7 @@ export interface ApplicationOut {
   flags_blocked: boolean;
   flags_acknowledged: boolean;
   sent_at: string | null;
+  scheduled_send_at?: string | null;
   follow_up_at: string | null;
   last_error: string | null;
   notes: string | null;

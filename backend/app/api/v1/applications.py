@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, Header, Request, status
 
 from app.core.deps import CurrentUser, DbSession
 from app.core.ratelimit import limiter
@@ -12,11 +13,13 @@ from app.schemas.application import (
     ApplicationPatch,
     MarkAppliedIn,
     RegenerateIn,
+    SendIn,
+    SendQuotaOut,
     ToneIn,
     UseDraftIn,
 )
 from app.schemas.tracking import BoardCard, MoveIn
-from app.services import application_service, tracking_service
+from app.services import application_service, send_service, tracking_service
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -31,6 +34,12 @@ async def get_board(user: CurrentUser, db: DbSession) -> list[BoardCard]:
     """Every application as a board card (the client groups them by `column`)."""
     await tracking_service.sync_follow_up_reminders(db, user)
     return await tracking_service.board_cards(db, user)
+
+
+@router.get("/send-quota")
+async def send_quota(user: CurrentUser, db: DbSession) -> SendQuotaOut:
+    """Today's emails: your daily limit, sent, waiting in the queue, and how many are left."""
+    return await send_service.quota(db, user)
 
 
 @router.get("/{application_id}")
@@ -119,3 +128,35 @@ async def follow_up_draft(
 async def follow_up_sent(application_id: uuid.UUID, user: CurrentUser, db: DbSession) -> BoardCard:
     """You sent a follow-up: counts it and schedules the next reminder (two at most)."""
     return await tracking_service.follow_up_sent(db, user, application_id)
+
+
+@router.post("/{application_id}/send", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("30/hour")
+async def send_application(
+    request: Request,
+    application_id: uuid.UUID,
+    body: SendIn,
+    user: CurrentUser,
+    db: DbSession,
+    idempotency_key: Annotated[str, Header(min_length=8, max_length=200)],
+) -> ApplicationOut:
+    """Schedule the reviewed email to go from your Gmail in 30-120 s (cancellable until then).
+
+    Needs `preview_confirmed: true` (set by the final preview) and an `Idempotency-Key`
+    header; a retried request with the same key returns the same result.
+    """
+    return await send_service.send(
+        db,
+        user,
+        application_id,
+        idempotency_key=idempotency_key,
+        preview_confirmed=body.preview_confirmed,
+    )
+
+
+@router.post("/{application_id}/cancel-send")
+async def cancel_send(
+    application_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> ApplicationOut:
+    """Stop a scheduled email before it goes (it returns to Ready)."""
+    return await send_service.cancel(db, user, application_id)

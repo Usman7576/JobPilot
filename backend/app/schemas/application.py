@@ -147,6 +147,7 @@ class ApplicationOut(ApiModel):
     flags_blocked: bool  # some draft has a "block" flag
     flags_acknowledged: bool
     sent_at: datetime | None  # when it was marked applied
+    scheduled_send_at: datetime | None = None  # queued: when the email goes (cancellable)
     follow_up_at: datetime | None
     last_error: str | None
     notes: str | None
@@ -178,3 +179,15 @@ class MarkAppliedIn(ApiModel):
 class ApplicationRef(ApiModel):
     id: uuid.UUID
     status: ApplicationStatus
+
+
+class SendIn(ApiModel):
+    # Only the final preview dialog sets this: nothing is sent without a person reviewing it.
+    preview_confirmed: bool = False
+
+
+class SendQuotaOut(ApiModel):
+    cap: int
+    sent_today: int
+    queued: int
+    remaining: int

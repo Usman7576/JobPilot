@@ -140,6 +140,8 @@ async def move(db: AsyncSession, user: User, application_id: uuid.UUID, body: Mo
     app = await application_service.get_owned(db, user, application_id)
     if application_service._is_generating(app) and board.column_of(app.status) != body.column:
         raise Conflict("Drafts are still being written; move it when they're ready.")
+    if app.status == S.QUEUED and board.column_of(app.status) != body.column:
+        raise Conflict("This email is scheduled to send. Cancel it first.")
     previous = app.status
     target = board.target_status(body.column, previous, withdrawn=body.withdrawn)
     if target == S.SAVED and await _has_drafts(db, app.id):

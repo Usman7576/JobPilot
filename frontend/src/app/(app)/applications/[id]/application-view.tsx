@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { DraftEditor } from "@/components/applications/draft-editor";
+import { emailSubject, emailText, SendDialog } from "@/components/applications/send-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import { ApiError } from "@/lib/api/fetcher";
 import {
   getApplicationsGetApplicationQueryKey,
   useApplicationsAcknowledgeFlags,
+  useApplicationsCancelSend,
   useApplicationsDeleteApplication,
   useApplicationsGetApplication,
   useApplicationsMarkApplied,
@@ -39,6 +41,7 @@ import {
   useApplicationsUseDraftVersion,
   useApplicationsVerifyApplication,
 } from "@/lib/api/generated/applications/applications";
+import { useIntegrationsListIntegrations } from "@/lib/api/generated/integrations/integrations";
 import type {
   ApplicationOut,
   ApplicationPatch,
@@ -67,15 +70,13 @@ const STATUS_LABEL: Record<string, string> = {
   saved: "Saved",
   drafting: "Writing…",
   ready: "Ready to review",
+  queued: "Sending soon",
   applied: "Applied",
 };
 const selectClass = "border-input bg-background h-8 rounded-md border px-2 text-sm";
 const VERIFY_TIMEOUT_MS = 90_000;
 
-function fullEmail(app: ApplicationOut) {
-  const c = (app.email?.content ?? {}) as { body?: string; signature?: string };
-  return [c.body, c.signature].filter(Boolean).join("\n\n");
-}
+const fullEmail = emailText;
 
 function coverLetterText(app: ApplicationOut) {
   const c = (app.cover_letter?.content ?? {}) as { body?: string; signature?: string };
@@ -102,7 +103,12 @@ export function ApplicationView() {
 
   const app = useApplicationsGetApplication(id, {
     query: {
-      refetchInterval: (q) => (q.state.data?.is_generating || verifyFrom ? 2500 : false),
+      refetchInterval: (q) =>
+        q.state.data?.is_generating || verifyFrom
+          ? 2500
+          : q.state.data?.status === "queued"
+            ? 5000
+            : false,
     },
   });
   const key = getApplicationsGetApplicationQueryKey(id);
@@ -116,6 +122,8 @@ export function ApplicationView() {
   const acknowledge = useApplicationsAcknowledgeFlags();
   const markApplied = useApplicationsMarkApplied();
   const remove = useApplicationsDeleteApplication();
+  const cancelSend = useApplicationsCancelSend();
+  const integrations = useIntegrationsListIntegrations();
 
   const data = app.data;
   const allVerified = (data?.email?.verified ?? true) && (data?.cover_letter?.verified ?? true);
@@ -146,6 +154,11 @@ export function ApplicationView() {
   if (!data) return <Skeleton className="h-96 w-full rounded-xl" />;
 
   const applied = ["applied", "replied", "interview", "offer", "rejected"].includes(data.status);
+  const queued = data.status === "queued";
+  const frozen = applied || queued;
+  const testMode = integrations.data?.send_backend === "smtp";
+  const gmail = integrations.data?.gmail;
+  const canSend = testMode || gmail?.status === "connected";
   const currentTone = tone ?? data.tone;
   const locked = data.flags_blocked && !data.flags_acknowledged;
   const drafts: Record<WritableKind, DraftOut | null> = {
@@ -178,7 +191,7 @@ export function ApplicationView() {
 
   const mailto = data.contact_email
     ? `mailto:${data.contact_email}?subject=${encodeURIComponent(
-        String((data.email?.content as { subject?: string } | undefined)?.subject ?? ""),
+        emailSubject(data),
       )}&body=${encodeURIComponent(fullEmail(data))}`
     : null;
 
@@ -238,7 +251,7 @@ export function ApplicationView() {
                 </button>
               ))}
             </div>
-            {!applied && (
+            {!frozen && (
               <div className="flex items-center gap-2">
                 <select
                   aria-label="Tone"
@@ -318,7 +331,7 @@ export function ApplicationView() {
                   key={current.id + (current.edited_by_user ? "e" : "")}
                   draft={current}
                   kind={tab}
-                  readOnly={applied || data.is_generating}
+                  readOnly={frozen || data.is_generating}
                   saving={update.isPending}
                   onSave={(body, subject) =>
                     patch(
@@ -332,7 +345,7 @@ export function ApplicationView() {
             </CardContent>
           </Card>
 
-          {current && tab !== "resume_tweaks" && !applied && (
+          {current && tab !== "resume_tweaks" && !frozen && (
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
@@ -379,7 +392,7 @@ export function ApplicationView() {
         <aside className="grid content-start gap-4">
           <ContactCard
             app={data}
-            disabled={applied}
+            disabled={frozen}
             onSave={(email) => patch({ contact_email: email })}
             onClear={() => patch({ clear_contact: true })}
           />
@@ -399,16 +412,47 @@ export function ApplicationView() {
                   You applied {timeAgo(data.sent_at)}.
                   {data.follow_up_at ? ` Follow-up reminder ${timeAgo(data.follow_up_at)}.` : ""}
                 </p>
+              ) : queued ? (
+                <SendingSoon
+                  at={data.scheduled_send_at}
+                  to={data.contact_email}
+                  cancelling={cancelSend.isPending}
+                  onCancel={() =>
+                    cancelSend.mutate(
+                      { applicationId: id },
+                      {
+                        onSuccess: (d) => {
+                          onData(d);
+                          toast("Cancelled. Nothing was sent.");
+                        },
+                        onError: (e) => {
+                          onError(e);
+                          void queryClient.invalidateQueries({ queryKey: key });
+                        },
+                      },
+                    )
+                  }
+                />
               ) : (
                 <>
-                  <Button
-                    variant="outline"
-                    className="justify-start"
-                    disabled
-                    title="Sending from the app is coming in a later update"
-                  >
-                    <Send className="size-4" /> Send via Gmail (coming soon)
-                  </Button>
+                  {data.email && data.contact_email && canSend && (
+                    <SendDialog
+                      app={data}
+                      from={testMode ? "Test mode (Mailpit)" : (gmail?.google_email ?? "")}
+                      testMode={testMode}
+                      disabled={locked || data.is_generating || !emailSubject(data)}
+                      onQueued={onData}
+                    />
+                  )}
+                  {data.email && data.contact_email && integrations.data && !canSend && (
+                    <p className="text-muted-foreground text-xs">
+                      <Link href="/settings" className="underline">
+                        Connect Gmail
+                      </Link>{" "}
+                      to send from the app
+                      {gmail?.status === "needs_reauth" ? " (it needs reconnecting)" : ""}.
+                    </p>
+                  )}
                   {data.email && (
                     <>
                       <Button
@@ -482,7 +526,7 @@ export function ApplicationView() {
             </Card>
           )}
 
-          {!applied && data.email && (
+          {!frozen && data.email && (
             <Button
               variant="ghost"
               className="justify-start"
@@ -529,6 +573,36 @@ export function ApplicationView() {
           </Button>
         </aside>
       </div>
+    </div>
+  );
+}
+
+function SendingSoon({
+  at,
+  to,
+  cancelling,
+  onCancel,
+}: {
+  at: string | null | undefined;
+  to: string | null | undefined;
+  cancelling: boolean;
+  onCancel: () => void;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const seconds = at ? Math.max(0, Math.round((new Date(at).getTime() - now) / 1000)) : null;
+  return (
+    <div className="grid gap-2 text-sm" aria-live="polite">
+      <p className="flex items-center gap-2">
+        <Send className="size-4" aria-hidden />
+        {seconds ? `Sending to ${to} in ${seconds}s.` : `Sending to ${to} now…`}
+      </p>
+      <Button variant="outline" disabled={cancelling} onClick={onCancel}>
+        {cancelling ? "Cancelling…" : "Cancel sending"}
+      </Button>
     </div>
   );
 }

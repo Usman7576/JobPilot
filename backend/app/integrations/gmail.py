@@ -1,7 +1,8 @@
 """Gmail: connect (OAuth, offline access), refresh tokens, send one message, disconnect.
 
-Only the gmail.send scope is requested: the app can send as the user but can't read mail.
-Reply detection (Phase 6) will ask for more access separately.
+By default only the gmail.send scope is requested: the app can send as the user but can't
+read mail. Reply detection asks for read-only access separately (connect with read=true).
+send_raw is called only by send_service.deliver (the queued, user-confirmed send).
 """
 
 from __future__ import annotations

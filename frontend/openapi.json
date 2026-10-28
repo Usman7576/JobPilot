@@ -1818,6 +1818,28 @@
         }
       }
     },
+    "/api/v1/applications/send-quota": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Send Quota",
+        "description": "Today's emails: your daily limit, sent, waiting in the queue, and how many are left.",
+        "operationId": "applications_send_quota",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendQuotaOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/applications/{application_id}": {
       "get": {
         "tags": [
@@ -2326,6 +2348,115 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BoardCard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/send": {
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Send Application",
+        "description": "Schedule the reviewed email to go from your Gmail in 30-120 s (cancellable until then).\n\nNeeds `preview_confirmed: true` (set by the final preview) and an `Idempotency-Key`\nheader; a retried request with the same key returns the same result.",
+        "operationId": "applications_send_application",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 200,
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/cancel-send": {
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Cancel Send",
+        "description": "Stop a scheduled email before it goes (it returns to Ready).",
+        "operationId": "applications_cancel_send",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationOut"
                 }
               }
             }
@@ -2969,6 +3100,18 @@
               }
             ],
             "title": "Sent At"
+          },
+          "scheduled_send_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Send At"
           },
           "follow_up_at": {
             "anyOf": [
@@ -6293,6 +6436,47 @@
           "scheduled"
         ],
         "title": "SearchTrigger"
+      },
+      "SendIn": {
+        "properties": {
+          "preview_confirmed": {
+            "type": "boolean",
+            "title": "Preview Confirmed",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "SendIn"
+      },
+      "SendQuotaOut": {
+        "properties": {
+          "cap": {
+            "type": "integer",
+            "title": "Cap"
+          },
+          "sent_today": {
+            "type": "integer",
+            "title": "Sent Today"
+          },
+          "queued": {
+            "type": "integer",
+            "title": "Queued"
+          },
+          "remaining": {
+            "type": "integer",
+            "title": "Remaining"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cap",
+          "sent_today",
+          "queued",
+          "remaining"
+        ],
+        "title": "SendQuotaOut"
       },
       "Seniority": {
         "type": "string",

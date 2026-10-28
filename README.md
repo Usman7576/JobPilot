@@ -15,13 +15,10 @@ computer or a free cloud VM.
 | **Resume** | Upload a PDF/DOCX; AI turns it into an editable profile. Files are encrypted at rest. |
 | **Find jobs** | Searches free job APIs (Arbeitnow, Remotive, Jooble, Adzuna, optional SerpAPI) for jobs or internships, by title and country/city. Optional scrapers (LinkedIn, Indeed…) are off by default. Duplicates are merged. Internships are labelled paid / unpaid. |
 | **Match** | Filters out what you excluded, ranks the rest by similarity to your resume, and has AI score the best 15 (skills, experience, seniority, domain, location) with red flags and a plain-language reason. |
-| **Apply** | Finds a contact email, writes an email and cover letter from a *fact sheet* of your resume, and flags any number, skill or degree that isn't on it. You copy the email, open it in your mail app, or apply on the company site with a checklist. |
-| **Track** | Drag-and-drop board (Saved → Applied → Replied → Interview → Offer / Rejected), timelines, follow-up reminders and AI follow-up drafts, a dashboard with your funnel and the skills to learn next. |
+| **Apply** | Finds a contact email, writes an email and cover letter from a *fact sheet* of your resume, and flags any number, skill or degree that isn't on it. Send it from your own Gmail after a final preview (with your resume attached, a daily cap, and a 30–120 s delay you can cancel), copy it, open it in your mail app, or apply on the company site with a checklist. |
+| **Track** | Drag-and-drop board (Saved → Applied → Replied → Interview → Offer / Rejected), timelines, follow-up reminders and AI follow-up drafts, a dashboard with your funnel and the skills to learn next. Optional Gmail reply detection moves cards when the companies you applied to write back. |
 | **Automate** | A daily search at your chosen hour with an email digest of new strong matches, and a Google Sheets tracker that updates itself. |
 | **Your data** | Export everything as a zip, or delete your account and all its data. |
-
-Not built yet: sending from the app through Gmail (you send from your own inbox) and
-detecting Gmail replies automatically (you move the card to *Replied*).
 
 ## Architecture
 
@@ -125,7 +122,8 @@ All free. Put them in `.env` and restart the API and worker.
    **Gmail API** and **Google Sheets API**.
 2. **OAuth consent screen**: External, Testing; add your Gmail as a **test user**; add the
    scopes `openid`, `.../auth/userinfo.email`, `.../auth/userinfo.profile`,
-   `.../auth/gmail.send` and `.../auth/drive.file`.
+   `.../auth/gmail.send` and `.../auth/drive.file` (plus `.../auth/gmail.readonly` if you
+   want reply detection; it's optional and asked for separately in Settings).
 3. **Credentials → OAuth client ID** (Web application) with these redirect URIs:
 
    ```
