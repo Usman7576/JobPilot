@@ -129,6 +129,8 @@ async def to_out(db: AsyncSession, app: Application) -> ApplicationOut:
         email=latest["email"],
         cover_letter=latest["cover_letter"],
         resume_tweaks=latest["resume_tweaks"],
+        follow_up=latest["follow_up"],
+        follow_up_count=app.follow_up_count,
         versions={k: v for k, v in versions.items() if k != DraftKind.FOLLOW_UP.value},
         flags_blocked=any(d.blocked for d in current),
         flags_acknowledged=app.guardrail_flags_acknowledged_at is not None,

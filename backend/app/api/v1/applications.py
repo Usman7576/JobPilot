@@ -12,9 +12,11 @@ from app.schemas.application import (
     ApplicationPatch,
     MarkAppliedIn,
     RegenerateIn,
+    ToneIn,
     UseDraftIn,
 )
-from app.services import application_service
+from app.schemas.tracking import BoardCard, MoveIn
+from app.services import application_service, tracking_service
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -22,6 +24,13 @@ router = APIRouter(prefix="/applications", tags=["applications"])
 @router.get("")
 async def list_applications(user: CurrentUser, db: DbSession) -> list[ApplicationListItem]:
     return await application_service.list_for_user(db, user)
+
+
+@router.get("/board")
+async def get_board(user: CurrentUser, db: DbSession) -> list[BoardCard]:
+    """Every application as a board card (the client groups them by `column`)."""
+    await tracking_service.sync_follow_up_reminders(db, user)
+    return await tracking_service.board_cards(db, user)
 
 
 @router.get("/{application_id}")
@@ -87,3 +96,26 @@ async def mark_applied(
 @router.delete("/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_application(application_id: uuid.UUID, user: CurrentUser, db: DbSession) -> None:
     await application_service.delete(db, user, application_id)
+
+
+@router.post("/{application_id}/move")
+async def move_application(
+    application_id: uuid.UUID, body: MoveIn, user: CurrentUser, db: DbSession
+) -> BoardCard:
+    """Drag and drop on the board: change column (status) and/or order."""
+    return await tracking_service.move(db, user, application_id, body)
+
+
+@router.post("/{application_id}/follow-up-draft", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("20/hour")
+async def follow_up_draft(
+    request: Request, application_id: uuid.UUID, body: ToneIn, user: CurrentUser, db: DbSession
+) -> None:
+    """Write a short follow-up email (you send it yourself; poll the application)."""
+    await tracking_service.request_follow_up_draft(db, user, application_id, body.tone)
+
+
+@router.post("/{application_id}/follow-up-sent")
+async def follow_up_sent(application_id: uuid.UUID, user: CurrentUser, db: DbSession) -> BoardCard:
+    """You sent a follow-up: counts it and schedules the next reminder (two at most)."""
+    return await tracking_service.follow_up_sent(db, user, application_id)

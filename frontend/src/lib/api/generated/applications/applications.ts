@@ -27,9 +27,12 @@ import type {
   ApplicationListItem,
   ApplicationOut,
   ApplicationPatch,
+  BoardCard,
   HTTPValidationError,
   MarkAppliedIn,
+  MoveIn,
   RegenerateIn,
+  ToneIn,
   UseDraftIn
 } from '../model';
 
@@ -145,6 +148,107 @@ export function useApplicationsListApplications<TData = Awaited<ReturnType<typeo
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getApplicationsListApplicationsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getApplicationsGetBoardUrl = () => {
+
+
+
+
+  return `/api/v1/applications/board`
+}
+
+/**
+ * Every application as a board card (the client groups them by `column`).
+ * @summary Get Board
+ */
+export const applicationsGetBoard = async ( options?: Parameters<typeof customFetch>[1]): Promise<BoardCard[]> => {
+
+  return customFetch<BoardCard[]>(getApplicationsGetBoardUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getApplicationsGetBoardQueryKey = () => {
+    return [
+    `/api/v1/applications/board`
+    ] as const;
+    }
+
+
+export const getApplicationsGetBoardQueryOptions = <TData = Awaited<ReturnType<typeof applicationsGetBoard>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsGetBoard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getApplicationsGetBoardQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof applicationsGetBoard>>> = ({ signal }) => applicationsGetBoard({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof applicationsGetBoard>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ApplicationsGetBoardQueryResult = NonNullable<Awaited<ReturnType<typeof applicationsGetBoard>>>
+export type ApplicationsGetBoardQueryError = ErrorType<unknown>
+
+
+export function useApplicationsGetBoard<TData = Awaited<ReturnType<typeof applicationsGetBoard>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsGetBoard>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof applicationsGetBoard>>,
+          TError,
+          Awaited<ReturnType<typeof applicationsGetBoard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useApplicationsGetBoard<TData = Awaited<ReturnType<typeof applicationsGetBoard>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsGetBoard>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof applicationsGetBoard>>,
+          TError,
+          Awaited<ReturnType<typeof applicationsGetBoard>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useApplicationsGetBoard<TData = Awaited<ReturnType<typeof applicationsGetBoard>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsGetBoard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Board
+ */
+
+export function useApplicationsGetBoard<TData = Awaited<ReturnType<typeof applicationsGetBoard>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsGetBoard>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getApplicationsGetBoardQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -830,4 +934,256 @@ export const useApplicationsMarkApplied = <TError = ErrorType<HTTPValidationErro
         TContext
       > => {
       return useMutation(getApplicationsMarkAppliedMutationOptions(options), queryClient);
+    }
+    export const getApplicationsMoveApplicationUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/v1/applications/${applicationId}/move`
+}
+
+/**
+ * Drag and drop on the board: change column (status) and/or order.
+ * @summary Move Application
+ */
+export const applicationsMoveApplication = async (applicationId: string,
+    moveIn: MoveIn, options?: Parameters<typeof customFetch>[1]): Promise<BoardCard> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<BoardCard>(getApplicationsMoveApplicationUrl(applicationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(moveIn)
+  }
+);}
+
+
+
+
+
+export const getApplicationsMoveApplicationMutationKey = () => ['applicationsMoveApplication'] as const;
+
+export const getApplicationsMoveApplicationMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsMoveApplication>>, TError,ApplicationsMoveApplicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applicationsMoveApplication>>, TError,ApplicationsMoveApplicationMutationVariables, TContext> => {
+
+const mutationKey = getApplicationsMoveApplicationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applicationsMoveApplication>>, ApplicationsMoveApplicationMutationVariables> = (props) => {
+          const {applicationId,data} = props ?? {};
+
+          return  applicationsMoveApplication(applicationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplicationsMoveApplicationMutationResult = NonNullable<Awaited<ReturnType<typeof applicationsMoveApplication>>>
+    export type ApplicationsMoveApplicationMutationBody = BodyType<MoveIn>
+    export type ApplicationsMoveApplicationMutationError = ErrorType<HTTPValidationError>
+    export type ApplicationsMoveApplicationMutationVariables = {applicationId: string;data: BodyType<MoveIn>}
+
+    /**
+ * @summary Move Application
+ */
+export const useApplicationsMoveApplication = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsMoveApplication>>, TError,ApplicationsMoveApplicationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof applicationsMoveApplication>>,
+        TError,
+        ApplicationsMoveApplicationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApplicationsMoveApplicationMutationOptions(options), queryClient);
+    }
+    export const getApplicationsFollowUpDraftUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/v1/applications/${applicationId}/follow-up-draft`
+}
+
+/**
+ * Write a short follow-up email (you send it yourself; poll the application).
+ * @summary Follow Up Draft
+ */
+export const applicationsFollowUpDraft = async (applicationId: string,
+    toneIn: ToneIn, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<unknown>(getApplicationsFollowUpDraftUrl(applicationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(toneIn)
+  }
+);}
+
+
+
+
+
+export const getApplicationsFollowUpDraftMutationKey = () => ['applicationsFollowUpDraft'] as const;
+
+export const getApplicationsFollowUpDraftMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsFollowUpDraft>>, TError,ApplicationsFollowUpDraftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applicationsFollowUpDraft>>, TError,ApplicationsFollowUpDraftMutationVariables, TContext> => {
+
+const mutationKey = getApplicationsFollowUpDraftMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applicationsFollowUpDraft>>, ApplicationsFollowUpDraftMutationVariables> = (props) => {
+          const {applicationId,data} = props ?? {};
+
+          return  applicationsFollowUpDraft(applicationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplicationsFollowUpDraftMutationResult = NonNullable<Awaited<ReturnType<typeof applicationsFollowUpDraft>>>
+    export type ApplicationsFollowUpDraftMutationBody = BodyType<ToneIn>
+    export type ApplicationsFollowUpDraftMutationError = ErrorType<HTTPValidationError>
+    export type ApplicationsFollowUpDraftMutationVariables = {applicationId: string;data: BodyType<ToneIn>}
+
+    /**
+ * @summary Follow Up Draft
+ */
+export const useApplicationsFollowUpDraft = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsFollowUpDraft>>, TError,ApplicationsFollowUpDraftMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof applicationsFollowUpDraft>>,
+        TError,
+        ApplicationsFollowUpDraftMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApplicationsFollowUpDraftMutationOptions(options), queryClient);
+    }
+    export const getApplicationsFollowUpSentUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/v1/applications/${applicationId}/follow-up-sent`
+}
+
+/**
+ * You sent a follow-up: counts it and schedules the next reminder (two at most).
+ * @summary Follow Up Sent
+ */
+export const applicationsFollowUpSent = async (applicationId: string, options?: Parameters<typeof customFetch>[1]): Promise<BoardCard> => {
+
+  return customFetch<BoardCard>(getApplicationsFollowUpSentUrl(applicationId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getApplicationsFollowUpSentMutationKey = () => ['applicationsFollowUpSent'] as const;
+
+export const getApplicationsFollowUpSentMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsFollowUpSent>>, TError,ApplicationsFollowUpSentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applicationsFollowUpSent>>, TError,ApplicationsFollowUpSentMutationVariables, TContext> => {
+
+const mutationKey = getApplicationsFollowUpSentMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applicationsFollowUpSent>>, ApplicationsFollowUpSentMutationVariables> = (props) => {
+          const {applicationId} = props ?? {};
+
+          return  applicationsFollowUpSent(applicationId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplicationsFollowUpSentMutationResult = NonNullable<Awaited<ReturnType<typeof applicationsFollowUpSent>>>
+
+    export type ApplicationsFollowUpSentMutationError = ErrorType<HTTPValidationError>
+    export type ApplicationsFollowUpSentMutationVariables = {applicationId: string}
+
+    /**
+ * @summary Follow Up Sent
+ */
+export const useApplicationsFollowUpSent = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsFollowUpSent>>, TError,ApplicationsFollowUpSentMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof applicationsFollowUpSent>>,
+        TError,
+        ApplicationsFollowUpSentMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApplicationsFollowUpSentMutationOptions(options), queryClient);
     }

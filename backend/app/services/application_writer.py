@@ -43,10 +43,12 @@ JOB_TEXT_CHARS = 4000
 LIMITS: dict[DraftKind, tuple[int, int]] = {
     DraftKind.EMAIL: (60, 150),
     DraftKind.COVER_LETTER: (250, 350),
+    DraftKind.FOLLOW_UP: (40, 110),
 }
 PROMPTS = {
     DraftKind.EMAIL: "application_email",
     DraftKind.COVER_LETTER: "cover_letter",
+    DraftKind.FOLLOW_UP: "follow_up",
     DraftKind.RESUME_TWEAKS: "resume_tweaks",
 }
 SIGN_OFF = {Tone.FORMAL: "Best regards,", Tone.FRIENDLY: "Thanks,", Tone.CONCISE: "Best,"}
@@ -95,7 +97,12 @@ def check(text: str, ctx: Context) -> Report:
 
 
 def _write(
-    session: Session, ctx: Context, kind: DraftKind, tone: Tone, instructions: str | None
+    session: Session,
+    ctx: Context,
+    kind: DraftKind,
+    tone: Tone,
+    instructions: str | None,
+    extra_vars: dict[str, Any] | None = None,
 ) -> tuple[LLMWritten, str, list[Flag]]:
     spec = load_prompt(PROMPTS[kind], 1)
     low, high = LIMITS[kind]
@@ -111,6 +118,7 @@ def _write(
             job_description=ctx.job_text,
             tone=tone.value,
             instructions=extra,
+            **(extra_vars or {}),
         )
         written, result = llm_gateway.generate(
             session,
@@ -143,9 +151,14 @@ def _write(
 
 
 def write_text(
-    session: Session, ctx: Context, kind: DraftKind, tone: Tone, instructions: str | None = None
+    session: Session,
+    ctx: Context,
+    kind: DraftKind,
+    tone: Tone,
+    instructions: str | None = None,
+    extra_vars: dict[str, Any] | None = None,
 ) -> ApplicationDraft:
-    written, model, length_flags = _write(session, ctx, kind, tone, instructions)
+    written, model, length_flags = _write(session, ctx, kind, tone, instructions, extra_vars)
     greeting = written.greeting.strip()
     text = guardrails.strip_fact_ids(written.body.strip())
     body = f"{greeting}\n\n{text}" if greeting else text
@@ -162,6 +175,8 @@ def write_text(
     }
     if kind == DraftKind.EMAIL:
         content["subject"] = subject_for(ctx.job, ctx.facts.name)
+    elif kind == DraftKind.FOLLOW_UP:
+        content["subject"] = follow_up_subject(session, ctx)
     return _save_draft(session, ctx.application, kind, tone, content, report, PROMPTS[kind], model)
 
 
@@ -253,12 +268,14 @@ def latest_draft(
 
 
 def verify(session: Session, ctx: Context, drafts: list[ApplicationDraft]) -> bool:
-    """One AI fact-check across the email and cover letter. False if the AI didn't answer."""
-    texts = {
-        d.kind.value: str(d.content.get("body", ""))
-        for d in drafts
-        if d.kind in (DraftKind.EMAIL, DraftKind.COVER_LETTER)
+    """One AI fact-check across the email (or follow-up) and cover letter. False if the AI
+    didn't answer."""
+    slot_of = {
+        DraftKind.EMAIL: "email",
+        DraftKind.FOLLOW_UP: "email",
+        DraftKind.COVER_LETTER: "cover_letter",
     }
+    texts = {slot_of[d.kind]: str(d.content.get("body", "")) for d in drafts if d.kind in slot_of}
     if not texts:
         return True
     prompt = render(
@@ -281,11 +298,12 @@ def verify(session: Session, ctx: Context, drafts: list[ApplicationDraft]) -> bo
         log.warning("claim_verify_failed", error_code=exc.code)
         return False
     for draft in drafts:
-        if draft.kind.value not in texts:
+        slot = slot_of.get(draft.kind)
+        if slot is None:
             continue
         report = Report.from_json(draft.guardrail_report)
         report.flags = [f for f in report.flags if f.source != "verifier"]
-        mine = [c.model_dump() for c in claims.claims if c.where == draft.kind.value]
+        mine = [c.model_dump() for c in claims.claims if c.where == slot]
         report.flags += guardrails.verifier_flags(mine, ctx.facts)
         report.verified = True
         draft.guardrail_report = report.to_json()
@@ -367,3 +385,42 @@ def reverify(session: Session, application_id: uuid.UUID) -> bool:
     application.updated_at = datetime.now(UTC)
     session.commit()
     return ok
+
+
+def follow_up_subject(session: Session, ctx: Context) -> str:
+    """Reply to the original subject when there was one, so it threads with the first email."""
+    original = latest_draft(session, ctx.application.id, DraftKind.EMAIL)
+    subject = str((original.content or {}).get("subject", "")) if original else ""
+    return f"Re: {subject}" if subject else f"Following up: {subject_for(ctx.job, ctx.facts.name)}"
+
+
+def write_follow_up(
+    session: Session, application_id: uuid.UUID, tone: Tone, instructions: str | None = None
+) -> bool:
+    """A follow-up draft for an application that hasn't had a reply. Never changes status."""
+    application = session.get(Application, application_id)
+    if application is None:
+        return False
+    try:
+        ctx = load_context(session, application)
+        days = (datetime.now(UTC) - application.sent_at).days if application.sent_at else 7
+        draft = write_text(
+            session,
+            ctx,
+            DraftKind.FOLLOW_UP,
+            tone,
+            instructions,
+            extra_vars={"applied_days_ago": max(days, 1)},
+        )
+        application.last_error = None
+        verify(session, ctx, [draft])
+    except (LookupError, LLMError) as exc:
+        session.rollback()
+        application = session.get(Application, application_id)
+        if application is None:
+            return False
+        application.last_error = (
+            str(exc) if isinstance(exc, LookupError) else "The AI couldn't write the follow-up."
+        )
+    session.commit()
+    return application.last_error is None

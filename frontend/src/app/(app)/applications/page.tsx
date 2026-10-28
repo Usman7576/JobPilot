@@ -9,10 +9,7 @@ export const metadata: Metadata = { title: "Applications" };
 export default function ApplicationsPage() {
   return (
     <>
-      <PageHeader
-        title="Applications"
-        description="Jobs you saved, are preparing, or applied to. A drag-and-drop board arrives in the next phase."
-      />
+      <PageHeader title="Applications" description="Track every application from saved to offer." />
       <ApplicationsList />
     </>
   );

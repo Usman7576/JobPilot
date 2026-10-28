@@ -80,6 +80,10 @@ class RegenerateIn(ApiModel):
     instructions: Instructions | None = None
 
 
+class ToneIn(ApiModel):
+    tone: Tone = Tone.FORMAL
+
+
 class ApplicationPatch(ApiModel):
     subject: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] | None = None
     email_body: Annotated[str, StringConstraints(max_length=6000)] | None = None
@@ -137,6 +141,8 @@ class ApplicationOut(ApiModel):
     email: DraftOut | None
     cover_letter: DraftOut | None
     resume_tweaks: DraftOut | None
+    follow_up: DraftOut | None
+    follow_up_count: int
     versions: dict[str, list[DraftOut]]  # all drafts per kind, newest first
     flags_blocked: bool  # some draft has a "block" flag
     flags_acknowledged: bool

@@ -3,9 +3,11 @@ from fastapi import APIRouter
 from app.api.v1 import (
     applications,
     auth,
+    dashboard,
     health,
     integrations,
     jobs,
+    notifications,
     preferences,
     resumes,
     searches,
@@ -22,3 +24,5 @@ api_router.include_router(searches.router)
 api_router.include_router(jobs.router)
 api_router.include_router(applications.router)
 api_router.include_router(integrations.router)
+api_router.include_router(notifications.router)
+api_router.include_router(dashboard.router)

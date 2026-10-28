@@ -1741,6 +1741,32 @@
         }
       }
     },
+    "/api/v1/applications/board": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Get Board",
+        "description": "Every application as a board card (the client groups them by `column`).",
+        "operationId": "applications_get_board",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BoardCard"
+                  },
+                  "type": "array",
+                  "title": "Response Applications Get Board"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/applications/{application_id}": {
       "get": {
         "tags": [
@@ -2116,6 +2142,156 @@
         }
       }
     },
+    "/api/v1/applications/{application_id}/move": {
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Move Application",
+        "description": "Drag and drop on the board: change column (status) and/or order.",
+        "operationId": "applications_move_application",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardCard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/follow-up-draft": {
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Follow Up Draft",
+        "description": "Write a short follow-up email (you send it yourself; poll the application).",
+        "operationId": "applications_follow_up_draft",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToneIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/{application_id}/follow-up-sent": {
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Follow Up Sent",
+        "description": "You sent a follow-up: counts it and schedules the next reminder (two at most).",
+        "operationId": "applications_follow_up_sent",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BoardCard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/integrations": {
       "get": {
         "tags": [
@@ -2253,6 +2429,108 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "List Notifications",
+        "description": "Latest notifications (follow-up reminders are created here when they're due).",
+        "operationId": "notifications_list_notifications",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notifications/read": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Mark Read",
+        "operationId": "notifications_mark_read",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkReadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Get Dashboard",
+        "description": "Stat cards, funnel, top missing skills and weekly activity.",
+        "operationId": "dashboard_get_dashboard",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 7,
+              "default": 30,
+              "title": "Days"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOut"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -2455,6 +2733,20 @@
               }
             ]
           },
+          "follow_up": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "follow_up_count": {
+            "type": "integer",
+            "title": "Follow Up Count"
+          },
           "versions": {
             "additionalProperties": {
               "items": {
@@ -2581,6 +2873,8 @@
           "email",
           "cover_letter",
           "resume_tweaks",
+          "follow_up",
+          "follow_up_count",
           "versions",
           "flags_blocked",
           "flags_acknowledged",
@@ -2723,6 +3017,142 @@
         ],
         "title": "AuthConfigOut"
       },
+      "BoardCard": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Job Id"
+          },
+          "job_title": {
+            "type": "string",
+            "title": "Job Title"
+          },
+          "company_name": {
+            "type": "string",
+            "title": "Company Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "column": {
+            "type": "string",
+            "enum": [
+              "saved",
+              "applied",
+              "replied",
+              "interview",
+              "offer",
+              "rejected"
+            ],
+            "title": "Column"
+          },
+          "position": {
+            "type": "number",
+            "title": "Position"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/ApplicationChannel"
+          },
+          "contact_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Email"
+          },
+          "match_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Score"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "last_reply_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Reply At"
+          },
+          "follow_up_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Up At"
+          },
+          "follow_up_due": {
+            "type": "boolean",
+            "title": "Follow Up Due"
+          },
+          "follow_up_count": {
+            "type": "integer",
+            "title": "Follow Up Count"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "job_id",
+          "job_title",
+          "company_name",
+          "status",
+          "column",
+          "position",
+          "channel",
+          "contact_email",
+          "match_score",
+          "sent_at",
+          "last_reply_at",
+          "follow_up_at",
+          "follow_up_due",
+          "follow_up_count",
+          "updated_at"
+        ],
+        "title": "BoardCard"
+      },
       "Body_resumes_upload_resume": {
         "properties": {
           "file": {
@@ -2849,6 +3279,48 @@
           "none"
         ],
         "title": "ContactSource"
+      },
+      "DashboardOut": {
+        "properties": {
+          "days": {
+            "type": "integer",
+            "title": "Days"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/StatCards"
+          },
+          "funnel": {
+            "items": {
+              "$ref": "#/components/schemas/FunnelStep"
+            },
+            "type": "array",
+            "title": "Funnel"
+          },
+          "missing_skills": {
+            "items": {
+              "$ref": "#/components/schemas/SkillGap"
+            },
+            "type": "array",
+            "title": "Missing Skills"
+          },
+          "weekly": {
+            "items": {
+              "$ref": "#/components/schemas/WeekPoint"
+            },
+            "type": "array",
+            "title": "Weekly"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "days",
+          "stats",
+          "funnel",
+          "missing_skills",
+          "weekly"
+        ],
+        "title": "DashboardOut"
       },
       "DraftKind": {
         "type": "string",
@@ -3130,6 +3602,25 @@
           "email"
         ],
         "title": "ForgotPasswordIn"
+      },
+      "FunnelStep": {
+        "properties": {
+          "step": {
+            "type": "string",
+            "title": "Step"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "step",
+          "count"
+        ],
+        "title": "FunnelStep"
       },
       "HTTPValidationError": {
         "properties": {
@@ -3828,6 +4319,29 @@
         "type": "object",
         "title": "MarkAppliedIn"
       },
+      "MarkReadIn": {
+        "properties": {
+          "ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": "array",
+                "maxItems": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "MarkReadIn"
+      },
       "MatchDetail": {
         "properties": {
           "stage": {
@@ -4049,6 +4563,151 @@
           "message"
         ],
         "title": "MessageOut"
+      },
+      "MoveIn": {
+        "properties": {
+          "column": {
+            "type": "string",
+            "enum": [
+              "saved",
+              "applied",
+              "replied",
+              "interview",
+              "offer",
+              "rejected"
+            ],
+            "title": "Column"
+          },
+          "before_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before Id"
+          },
+          "after_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After Id"
+          },
+          "withdrawn": {
+            "type": "boolean",
+            "title": "Withdrawn",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "column"
+        ],
+        "title": "MoveIn"
+      },
+      "NotificationKind": {
+        "type": "string",
+        "enum": [
+          "search_done",
+          "strong_matches",
+          "reply_detected",
+          "follow_up_due",
+          "send_failed",
+          "integration_error",
+          "budget_warning"
+        ],
+        "title": "NotificationKind"
+      },
+      "NotificationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/NotificationKind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "read": {
+            "type": "boolean",
+            "title": "Read"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "link",
+          "read",
+          "created_at"
+        ],
+        "title": "NotificationOut"
+      },
+      "NotificationsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "unread": {
+            "type": "integer",
+            "title": "Unread"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "unread"
+        ],
+        "title": "NotificationsOut"
       },
       "OnboardingStep": {
         "type": "string",
@@ -5348,6 +6007,25 @@
         ],
         "title": "Skill"
       },
+      "SkillGap": {
+        "properties": {
+          "skill": {
+            "type": "string",
+            "title": "Skill"
+          },
+          "jobs": {
+            "type": "integer",
+            "title": "Jobs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "skill",
+          "jobs"
+        ],
+        "title": "SkillGap"
+      },
       "SourceOut": {
         "properties": {
           "name": {
@@ -5408,6 +6086,64 @@
         ],
         "title": "SourceRunStatus"
       },
+      "StatCards": {
+        "properties": {
+          "jobs_found": {
+            "type": "integer",
+            "title": "Jobs Found"
+          },
+          "avg_match_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Match Score"
+          },
+          "applied": {
+            "type": "integer",
+            "title": "Applied"
+          },
+          "replied": {
+            "type": "integer",
+            "title": "Replied"
+          },
+          "reply_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Rate"
+          },
+          "interviews": {
+            "type": "integer",
+            "title": "Interviews"
+          },
+          "offers": {
+            "type": "integer",
+            "title": "Offers"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "jobs_found",
+          "avg_match_score",
+          "applied",
+          "replied",
+          "reply_rate",
+          "interviews",
+          "offers"
+        ],
+        "title": "StatCards"
+      },
       "Tone": {
         "type": "string",
         "enum": [
@@ -5416,6 +6152,17 @@
           "concise"
         ],
         "title": "Tone"
+      },
+      "ToneIn": {
+        "properties": {
+          "tone": {
+            "$ref": "#/components/schemas/Tone",
+            "default": "formal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ToneIn"
       },
       "UseDraftIn": {
         "properties": {
@@ -5603,6 +6350,36 @@
           "token"
         ],
         "title": "VerifyEmailIn"
+      },
+      "WeekPoint": {
+        "properties": {
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "applied": {
+            "type": "integer",
+            "title": "Applied"
+          },
+          "replied": {
+            "type": "integer",
+            "title": "Replied"
+          },
+          "interviews": {
+            "type": "integer",
+            "title": "Interviews"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "week_start",
+          "applied",
+          "replied",
+          "interviews"
+        ],
+        "title": "WeekPoint"
       },
       "WorkEntry": {
         "properties": {

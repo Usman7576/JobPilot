@@ -12,15 +12,22 @@ from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.domain.extraction_rules import internship_role
 from app.domain.normalize import normalize
-from app.models import Job, SearchRun, SearchRunSource, UserJob
-from app.models.enums import EmploymentType, SearchKind, SearchStatus, SourceRunStatus
+from app.models import Job, JobMatch, Notification, SearchRun, SearchRunSource, UserJob
+from app.models.enums import (
+    EmploymentType,
+    NotificationKind,
+    Recommendation,
+    SearchKind,
+    SearchStatus,
+    SourceRunStatus,
+)
 from app.providers.embeddings import get_embeddings
 from app.providers.sources import SourceError, SourceQuery, all_sources
 from app.services import job_store, matching, source_guard
@@ -263,7 +270,32 @@ def _match(session: Session, run: SearchRun, counts: dict[str, int]) -> str | No
         return "Match scores couldn't be computed this time."
     counts["filtered_out"] = stats.filtered_out
     counts["scored"] = stats.scored
+    _notify_strong_matches(session, run)
     return stats.stopped
+
+
+def _notify_strong_matches(session: Session, run: SearchRun) -> None:
+    strong = session.scalar(
+        select(func.count())
+        .select_from(JobMatch)
+        .where(
+            JobMatch.user_id == run.user_id,
+            JobMatch.recommendation == Recommendation.STRONG_APPLY,
+            JobMatch.scored_at >= run.started_at,
+        )
+    )
+    if strong:
+        noun = "match" if strong == 1 else "matches"
+        session.add(
+            Notification(
+                user_id=run.user_id,
+                kind=NotificationKind.STRONG_MATCHES,
+                title=f"{strong} strong {noun} found",
+                body="Jobs that fit your resume well, from your latest search.",
+                link="/jobs",
+            )
+        )
+        session.commit()
 
 
 def _final_status(rows: list[SearchRunSource]) -> SearchStatus:

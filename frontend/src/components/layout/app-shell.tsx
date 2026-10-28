@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/fetcher";
 import { useUsersGetMe } from "@/lib/api/generated/users/users";
 
+import { NotificationsBell } from "./notifications-bell";
 import { SidebarNav } from "./sidebar-nav";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
@@ -84,6 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Brand />
           </div>
           <div className="ml-auto flex items-center gap-1">
+            <NotificationsBell />
             <ThemeToggle />
             <UserMenu user={me.data} />
           </div>

@@ -27,6 +27,8 @@ export interface ApplicationOut {
   email: DraftOut | null;
   cover_letter: DraftOut | null;
   resume_tweaks: DraftOut | null;
+  follow_up: DraftOut | null;
+  follow_up_count: number;
   versions: ApplicationOutVersions;
   flags_blocked: boolean;
   flags_acknowledged: boolean;

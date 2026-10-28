@@ -24,3 +24,10 @@ def verify_application(application_id: str) -> bool:
     """Run the AI fact-check again on the current email and cover letter."""
     with sync_session() as session:
         return application_writer.reverify(session, uuid.UUID(application_id))
+
+
+@celery_app.task(soft_time_limit=4 * 60)
+def write_follow_up(application_id: str, tone: str) -> bool:
+    """A follow-up email draft for an application that hasn't had a reply."""
+    with sync_session() as session:
+        return application_writer.write_follow_up(session, uuid.UUID(application_id), Tone(tone))
