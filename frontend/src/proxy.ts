@@ -14,6 +14,10 @@ const SESSION_HINT_COOKIE = "jp_session";
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  // The homepage is for visitors; signed-in users go straight to their jobs.
+  if (pathname === "/" && request.cookies.has(SESSION_HINT_COOKIE)) {
+    return NextResponse.redirect(new URL("/jobs", request.url));
+  }
   const isProtected = PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
