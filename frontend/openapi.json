@@ -1450,6 +1450,30 @@
             }
           },
           {
+            "name": "has_email",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Only jobs whose posting has an email",
+              "default": false,
+              "title": "Has Email"
+            },
+            "description": "Only jobs whose posting has an email"
+          },
+          {
+            "name": "hide_applied",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Leave out jobs you applied to",
+              "default": false,
+              "title": "Hide Applied"
+            },
+            "description": "Leave out jobs you applied to"
+          },
+          {
             "name": "sort",
             "in": "query",
             "required": false,
@@ -1811,6 +1835,70 @@
                   },
                   "type": "array",
                   "title": "Response Applications Get Board"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/prepare-batch": {
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Prepare Batch",
+        "description": "Write emails for up to 25 jobs at once. Nothing is sent: each one waits in the\nreview queue for you to approve or skip.",
+        "operationId": "applications_prepare_batch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrepareBatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrepareBatchOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/applications/review-queue": {
+      "get": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Review Queue",
+        "description": "Written emails waiting for your review, and how many are still being written.",
+        "operationId": "applications_review_queue",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueueOut"
                 }
               }
             }
@@ -4391,6 +4479,16 @@
                 "type": "null"
               }
             ]
+          },
+          "application": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApplicationRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -4596,6 +4694,16 @@
               }
             ]
           },
+          "application": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApplicationRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "description_text": {
             "anyOf": [
               {
@@ -4620,16 +4728,6 @@
             },
             "type": "array",
             "title": "Source Links"
-          },
-          "application": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ApplicationRef"
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
         "additionalProperties": false,
@@ -4658,10 +4756,10 @@
           "has_contact_email",
           "dismissed",
           "match",
+          "application",
           "description_text",
           "contact_emails",
-          "source_links",
-          "application"
+          "source_links"
         ],
         "title": "JobDetail"
       },
@@ -5567,6 +5665,57 @@
         ],
         "title": "PreferredLocation"
       },
+      "PrepareBatchIn": {
+        "properties": {
+          "job_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 25,
+            "minItems": 1,
+            "title": "Job Ids"
+          },
+          "tone": {
+            "$ref": "#/components/schemas/Tone",
+            "default": "formal"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "job_ids"
+        ],
+        "title": "PrepareBatchIn",
+        "description": "Write application emails for several jobs at once (each is still reviewed before it\ngoes out)."
+      },
+      "PrepareBatchOut": {
+        "properties": {
+          "started": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Started"
+          },
+          "skipped": {
+            "items": {
+              "$ref": "#/components/schemas/SkippedJob"
+            },
+            "type": "array",
+            "title": "Skipped"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "started",
+          "skipped"
+        ],
+        "title": "PrepareBatchOut"
+      },
       "PrepareIn": {
         "properties": {
           "tone": {
@@ -6176,6 +6325,28 @@
         ],
         "title": "ResumeSummary"
       },
+      "ReviewQueueOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "writing": {
+            "type": "integer",
+            "title": "Writing"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "writing"
+        ],
+        "title": "ReviewQueueOut"
+      },
       "SalaryPeriod": {
         "type": "string",
         "enum": [
@@ -6597,6 +6768,26 @@
           "jobs"
         ],
         "title": "SkillGap"
+      },
+      "SkippedJob": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Job Id"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "job_id",
+          "reason"
+        ],
+        "title": "SkippedJob"
       },
       "SourceOut": {
         "properties": {

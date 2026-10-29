@@ -42,6 +42,8 @@ class JobCard(ApiModel):
     has_contact_email: bool
     dismissed: bool
     match: MatchSummary | None
+    # Your application to this job, if any (so the feed can mark it and skip it).
+    application: ApplicationRef | None = None
 
 
 class JobDetail(JobCard):

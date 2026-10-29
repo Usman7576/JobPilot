@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import AppError, NotFound, ServiceUnavailable
 from app.models import Application, Job, JobMatch, JobSourceRecord, Resume, User, UserJob
 from app.models.enums import (
+    ApplicationStatus,
     EmploymentType,
     PayStatus,
     Recommendation,
@@ -25,6 +26,16 @@ from app.schemas.job import JobCard, JobDetail, JobPage, JobSort, JobSourceLink
 from app.schemas.match import MatchDetail, MatchSummary, RedFlagOut
 
 SNIPPET_CHARS = 280
+# Sent (or on its way): "hide applied" leaves these out of the feed.
+SENT_OR_LATER = (
+    ApplicationStatus.QUEUED,
+    ApplicationStatus.APPLIED,
+    ApplicationStatus.REPLIED,
+    ApplicationStatus.INTERVIEW,
+    ApplicationStatus.OFFER,
+    ApplicationStatus.REJECTED,
+    ApplicationStatus.WITHDRAWN,
+)
 
 
 class NoActiveResume(AppError):
@@ -138,6 +149,8 @@ async def list_jobs(
     sort: JobSort,
     limit: int,
     offset: int,
+    has_email: bool = False,
+    hide_applied: bool = False,
 ) -> JobPage:
     key = await active_resume_key(db, user)
     stmt: Select[Job, UserJob, JobMatch] = (
@@ -170,6 +183,16 @@ async def list_jobs(
         stmt = stmt.where(JobMatch.overall_score >= min_score)
     if recommendation:
         stmt = stmt.where(JobMatch.recommendation == recommendation)
+    if has_email:
+        stmt = stmt.where(func.cardinality(Job.contact_emails) > 0)
+    if hide_applied:
+        stmt = stmt.where(
+            ~exists().where(
+                Application.user_id == user.id,
+                Application.job_id == Job.id,
+                Application.status.in_(SENT_OR_LATER),
+            )
+        )
 
     hidden = stmt.where(JobMatch.hard_filter_passed.is_(False))
     filtered_out = await db.scalar(select(func.count()).select_from(hidden.subquery())) or 0
@@ -201,7 +224,21 @@ async def list_jobs(
         for job_id, name in src_rows:
             sources_by_job.setdefault(job_id, []).append(name)
 
-    items = [_card(job, uj, sorted(sources_by_job.get(job.id, [])), m) for job, uj, m in rows]
+    apps: dict[uuid.UUID, ApplicationRef] = {}
+    if rows:
+        app_rows = await db.execute(
+            select(Application.job_id, Application.id, Application.status).where(
+                Application.user_id == user.id,
+                Application.job_id.in_([job.id for job, _, _ in rows]),
+            )
+        )
+        apps = {job_id: ApplicationRef(id=i, status=s) for job_id, i, s in app_rows}
+    items = [
+        _card(job, uj, sorted(sources_by_job.get(job.id, [])), m).model_copy(
+            update={"application": apps.get(job.id)}
+        )
+        for job, uj, m in rows
+    ]
     return JobPage(
         items=items,
         total=total,
@@ -247,7 +284,7 @@ async def detail(db: AsyncSession, user: User, job_id: uuid.UUID) -> JobDetail:
     ]
     card = _card(job, user_job, sorted({r.source for r in records}), match)
     return JobDetail(
-        **card.model_dump(exclude={"match"}),
+        **card.model_dump(exclude={"match", "application"}),
         description_text=job.description_text,
         contact_emails=job.contact_emails,
         source_links=links,

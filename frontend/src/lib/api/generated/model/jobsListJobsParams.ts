@@ -21,6 +21,14 @@ min_score?: number | null;
 recommendation?: Recommendation | null;
 include_filtered?: boolean;
 include_dismissed?: boolean;
+/**
+ * Only jobs whose posting has an email
+ */
+has_email?: boolean;
+/**
+ * Leave out jobs you applied to
+ */
+hide_applied?: boolean;
 sort?: JobsListJobsSort;
 /**
  * @minimum 1

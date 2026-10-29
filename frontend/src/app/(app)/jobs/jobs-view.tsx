@@ -1,19 +1,29 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Briefcase, GraduationCap, Search, SlidersHorizontal } from "lucide-react";
+import {
+  Briefcase,
+  GraduationCap,
+  Mail,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+  X,
+} from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/common/empty-state";
 import { PageHeader } from "@/components/common/page-header";
-import { JobCard } from "@/components/jobs/job-card";
+import { canBatch, JobCard } from "@/components/jobs/job-card";
 import { SearchProgress } from "@/components/jobs/search-progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/fetcher";
+import { useApplicationsPrepareBatch } from "@/lib/api/generated/applications/applications";
 import {
   getJobsListJobsQueryKey,
   useJobsDismissJob,
@@ -26,6 +36,7 @@ import type {
   Recommendation,
   RemoteType,
   SearchKind,
+  Tone,
 } from "@/lib/api/generated/model";
 import {
   usePreferencesGetPreferences,
@@ -39,6 +50,7 @@ import { errorMessage } from "@/lib/forms";
 import { cn } from "@/lib/utils";
 
 const PAGE = 20;
+const BATCH_MAX = 25; // per "Prepare emails" (the API's limit)
 const selectClass = "border-input bg-background h-9 rounded-md border px-2 text-sm";
 
 const KINDS: { value: SearchKind; label: string; icon: typeof Briefcase }[] = [
@@ -63,6 +75,8 @@ export function JobsView() {
   const start = useSearchesStartSearch();
   const dismiss = useJobsDismissJob();
   const undismiss = useJobsUndismissJob();
+  const prepareBatch = useApplicationsPrepareBatch();
+  const router = useRouter();
 
   const [runId, setRunId] = useState<string | null>(null);
   const [kind, setKind] = useState<SearchKind>("jobs");
@@ -74,6 +88,10 @@ export function JobsView() {
   const [source, setSource] = useState("");
   const [remote, setRemote] = useState<RemoteType | "">("");
   const [limit, setLimit] = useState(PAGE);
+  const [withEmail, setWithEmail] = useState(false);
+  const [hideApplied, setHideApplied] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [tone, setTone] = useState<Tone>("formal");
   const query = useDebounced(q);
 
   const shownRun = runId ?? active.data?.id ?? null;
@@ -88,8 +106,40 @@ export function JobsView() {
     q: query || undefined,
     source: source || undefined,
     remote_type: remote || undefined,
+    has_email: withEmail || undefined,
+    hide_applied: hideApplied || undefined,
     limit,
   });
+
+  const pickable = (jobs.data?.items ?? []).filter(canBatch);
+  const toggle = (id: string, on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on && next.size >= BATCH_MAX) {
+        toast.error(`Up to ${BATCH_MAX} at a time.`);
+        return prev;
+      }
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  const selectAll = () => setSelected(new Set(pickable.slice(0, BATCH_MAX).map((j) => j.id)));
+  const prepareSelected = () =>
+    prepareBatch.mutate(
+      { data: { job_ids: [...selected], tone } },
+      {
+        onSuccess: (out) => {
+          setSelected(new Set());
+          void queryClient.invalidateQueries({ queryKey: getJobsListJobsQueryKey() });
+          const skipped = out.skipped.length ? ` ${out.skipped.length} skipped.` : "";
+          toast.success(
+            `Writing ${out.started.length} email${out.started.length === 1 ? "" : "s"}.${skipped} Review them before anything is sent.`,
+          );
+          router.push("/applications/review");
+        },
+        onError: (e) => toast.error(errorMessage(e)),
+      },
+    );
 
   const findJobs = () =>
     start.mutate(
@@ -132,7 +182,9 @@ export function JobsView() {
 
   const needsPrefs = prefs.data && (!prefs.data.is_saved || !prefs.data.target_titles?.length);
   const searching = Boolean(shownRun && active.data?.is_active);
-  const filtered = Boolean(q || source || remote || fit || (internships && pay));
+  const filtered = Boolean(
+    q || source || remote || fit || withEmail || hideApplied || (internships && pay),
+  );
 
   return (
     <>
@@ -269,6 +321,28 @@ export function JobsView() {
               <option value="posted">Newest</option>
               <option value="discovered">Recently found</option>
             </select>
+            <label className="flex items-center gap-1.5 text-sm">
+              <input
+                type="checkbox"
+                checked={withEmail}
+                onChange={(e) => {
+                  setWithEmail(e.target.checked);
+                  setLimit(PAGE);
+                }}
+              />
+              <Mail className="size-3.5" aria-hidden /> Has email
+            </label>
+            <label className="flex items-center gap-1.5 text-sm">
+              <input
+                type="checkbox"
+                checked={hideApplied}
+                onChange={(e) => {
+                  setHideApplied(e.target.checked);
+                  setLimit(PAGE);
+                }}
+              />
+              Hide applied
+            </label>
             {jobs.data && (
               <span className="text-muted-foreground self-center text-sm">
                 {jobs.data.total} {noun}
@@ -307,8 +381,25 @@ export function JobsView() {
             </div>
           ) : jobs.data?.items.length ? (
             <div className="grid gap-3">
+              {pickable.length > 0 && (
+                <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+                  <Button size="sm" variant="outline" onClick={selectAll}>
+                    <Mail className="size-4" /> Select all with email (
+                    {Math.min(pickable.length, BATCH_MAX)})
+                  </Button>
+                  <span>
+                    Then prepare their emails in one go. You review each before it&apos;s sent.
+                  </span>
+                </div>
+              )}
               {jobs.data.items.map((job) => (
-                <JobCard key={job.id} job={job} onDismiss={() => hide(job.id)} />
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onDismiss={() => hide(job.id)}
+                  selected={selected.has(job.id)}
+                  onSelect={(on) => toggle(job.id, on)}
+                />
               ))}
               {jobs.data.has_more && (
                 <Button
@@ -332,6 +423,34 @@ export function JobsView() {
             />
           )}
         </>
+      )}
+
+      {selected.size > 0 && (
+        <div className="bg-background/95 sticky bottom-4 z-20 mt-6 flex flex-wrap items-center gap-3 rounded-xl border p-3 shadow-lg backdrop-blur">
+          <span className="text-sm font-medium">{selected.size} selected</span>
+          <select
+            aria-label="Tone"
+            className={selectClass}
+            value={tone}
+            onChange={(e) => setTone(e.target.value as Tone)}
+          >
+            <option value="formal">Formal</option>
+            <option value="friendly">Friendly</option>
+            <option value="concise">Concise</option>
+          </select>
+          <Button onClick={prepareSelected} disabled={prepareBatch.isPending}>
+            <Sparkles className="size-4" />
+            {prepareBatch.isPending
+              ? "Starting…"
+              : `Prepare ${selected.size} email${selected.size === 1 ? "" : "s"}`}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+            <X className="size-4" /> Clear
+          </Button>
+          <span className="text-muted-foreground text-xs">
+            Nothing is sent until you approve each one.
+          </span>
+        </div>
       )}
     </>
   );

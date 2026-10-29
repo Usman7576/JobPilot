@@ -31,7 +31,10 @@ import type {
   HTTPValidationError,
   MarkAppliedIn,
   MoveIn,
+  PrepareBatchIn,
+  PrepareBatchOut,
   RegenerateIn,
+  ReviewQueueOut,
   SendIn,
   SendQuotaOut,
   ToneIn,
@@ -251,6 +254,196 @@ export function useApplicationsGetBoard<TData = Awaited<ReturnType<typeof applic
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getApplicationsGetBoardQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export const getApplicationsPrepareBatchUrl = () => {
+
+
+
+
+  return `/api/v1/applications/prepare-batch`
+}
+
+/**
+ * Write emails for up to 25 jobs at once. Nothing is sent: each one waits in the
+ * review queue for you to approve or skip.
+ * @summary Prepare Batch
+ */
+export const applicationsPrepareBatch = async (prepareBatchIn: PrepareBatchIn, options?: Parameters<typeof customFetch>[1]): Promise<PrepareBatchOut> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<PrepareBatchOut>(getApplicationsPrepareBatchUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(prepareBatchIn)
+  }
+);}
+
+
+
+
+
+export const getApplicationsPrepareBatchMutationKey = () => ['applicationsPrepareBatch'] as const;
+
+export const getApplicationsPrepareBatchMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsPrepareBatch>>, TError,ApplicationsPrepareBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applicationsPrepareBatch>>, TError,ApplicationsPrepareBatchMutationVariables, TContext> => {
+
+const mutationKey = getApplicationsPrepareBatchMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applicationsPrepareBatch>>, ApplicationsPrepareBatchMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  applicationsPrepareBatch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplicationsPrepareBatchMutationResult = NonNullable<Awaited<ReturnType<typeof applicationsPrepareBatch>>>
+    export type ApplicationsPrepareBatchMutationBody = BodyType<PrepareBatchIn>
+    export type ApplicationsPrepareBatchMutationError = ErrorType<HTTPValidationError>
+    export type ApplicationsPrepareBatchMutationVariables = {data: BodyType<PrepareBatchIn>}
+
+    /**
+ * @summary Prepare Batch
+ */
+export const useApplicationsPrepareBatch = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsPrepareBatch>>, TError,ApplicationsPrepareBatchMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof applicationsPrepareBatch>>,
+        TError,
+        ApplicationsPrepareBatchMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApplicationsPrepareBatchMutationOptions(options), queryClient);
+    }
+    export const getApplicationsReviewQueueUrl = () => {
+
+
+
+
+  return `/api/v1/applications/review-queue`
+}
+
+/**
+ * Written emails waiting for your review, and how many are still being written.
+ * @summary Review Queue
+ */
+export const applicationsReviewQueue = async ( options?: Parameters<typeof customFetch>[1]): Promise<ReviewQueueOut> => {
+
+  return customFetch<ReviewQueueOut>(getApplicationsReviewQueueUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getApplicationsReviewQueueQueryKey = () => {
+    return [
+    `/api/v1/applications/review-queue`
+    ] as const;
+    }
+
+
+export const getApplicationsReviewQueueQueryOptions = <TData = Awaited<ReturnType<typeof applicationsReviewQueue>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsReviewQueue>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getApplicationsReviewQueueQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof applicationsReviewQueue>>> = ({ signal }) => applicationsReviewQueue({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof applicationsReviewQueue>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ApplicationsReviewQueueQueryResult = NonNullable<Awaited<ReturnType<typeof applicationsReviewQueue>>>
+export type ApplicationsReviewQueueQueryError = ErrorType<unknown>
+
+
+export function useApplicationsReviewQueue<TData = Awaited<ReturnType<typeof applicationsReviewQueue>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsReviewQueue>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof applicationsReviewQueue>>,
+          TError,
+          Awaited<ReturnType<typeof applicationsReviewQueue>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useApplicationsReviewQueue<TData = Awaited<ReturnType<typeof applicationsReviewQueue>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsReviewQueue>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof applicationsReviewQueue>>,
+          TError,
+          Awaited<ReturnType<typeof applicationsReviewQueue>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useApplicationsReviewQueue<TData = Awaited<ReturnType<typeof applicationsReviewQueue>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsReviewQueue>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Review Queue
+ */
+
+export function useApplicationsReviewQueue<TData = Awaited<ReturnType<typeof applicationsReviewQueue>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof applicationsReviewQueue>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getApplicationsReviewQueueQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

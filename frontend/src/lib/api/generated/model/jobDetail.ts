@@ -37,8 +37,8 @@ export interface JobDetail {
   has_contact_email: boolean;
   dismissed: boolean;
   match: MatchDetail | null;
+  application: ApplicationRef | null;
   description_text: string | null;
   contact_emails: string[];
   source_links: JobSourceLink[];
-  application: ApplicationRef | null;
 }

@@ -32,8 +32,12 @@ from app.schemas.application import (
     DraftOut,
     EventOut,
     FlagOut,
+    PrepareBatchIn,
+    PrepareBatchOut,
     PrepareIn,
     RegenerateIn,
+    ReviewQueueOut,
+    SkippedJob,
 )
 from app.schemas.profile import ResumeProfile
 from app.services import sheets_service
@@ -479,3 +483,64 @@ async def delete(db: AsyncSession, user: User, application_id: uuid.UUID) -> Non
     await db.delete(app)
     await db.commit()
     send_service.revoke(task_id)
+
+
+# --- many at once ----------------------------------------------------------------------------
+
+
+async def prepare_batch(db: AsyncSession, user: User, body: PrepareBatchIn) -> PrepareBatchOut:
+    """Start writing the email for each job that has an address in its posting.
+
+    Nothing is sent: each draft lands in the review queue, where the user approves or skips
+    it one by one. Jobs already applied to, being written, or without an email are skipped.
+    """
+    resume = await _active_resume(db, user)
+    started: list[uuid.UUID] = []
+    skipped: list[SkippedJob] = []
+    for job_id in dict.fromkeys(body.job_ids):
+        job = await db.scalar(
+            select(Job)
+            .join(UserJob, UserJob.job_id == Job.id)
+            .where(Job.id == job_id, UserJob.user_id == user.id)
+        )
+        if job is None:
+            skipped.append(SkippedJob(job_id=job_id, reason="Job not found"))
+            continue
+        if not job.contact_emails:
+            skipped.append(SkippedJob(job_id=job_id, reason="No email in the posting"))
+            continue
+        app = await _get_or_create(db, user, job)
+        if app.status == ApplicationStatus.READY and (await _latest(db, app.id, DraftKind.EMAIL)):
+            skipped.append(SkippedJob(job_id=job_id, reason="Already written: it's in the queue"))
+            await db.commit()
+            continue
+        app.resume_id = resume.id
+        try:
+            await _start_writing(db, app, [DraftKind.EMAIL.value], body.tone, None)
+        except AppError as exc:
+            await db.rollback()
+            skipped.append(SkippedJob(job_id=job_id, reason=exc.detail))
+            continue
+        started.append(app.id)
+    return PrepareBatchOut(started=started, skipped=skipped)
+
+
+async def review_queue(db: AsyncSession, user: User) -> ReviewQueueOut:
+    """Written emails with an address, waiting for the user to approve or skip them."""
+    rows = await db.scalars(
+        select(Application)
+        .where(
+            Application.user_id == user.id,
+            Application.status == ApplicationStatus.READY,
+            Application.contact_email.is_not(None),
+        )
+        .order_by(Application.updated_at)
+        .limit(50)
+    )
+    items = [out for app in rows if (out := await to_out(db, app)).email is not None]
+    drafting = await db.scalars(
+        select(Application).where(
+            Application.user_id == user.id, Application.status == ApplicationStatus.DRAFTING
+        )
+    )
+    return ReviewQueueOut(items=items, writing=sum(_is_generating(a) for a in drafting))

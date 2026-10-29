@@ -191,3 +191,26 @@ class SendQuotaOut(ApiModel):
     sent_today: int
     queued: int
     remaining: int
+
+
+class PrepareBatchIn(ApiModel):
+    """Write application emails for several jobs at once (each is still reviewed before it
+    goes out)."""
+
+    job_ids: list[uuid.UUID] = Field(min_length=1, max_length=25)
+    tone: Tone = Tone.FORMAL
+
+
+class SkippedJob(ApiModel):
+    job_id: uuid.UUID
+    reason: str
+
+
+class PrepareBatchOut(ApiModel):
+    started: list[uuid.UUID]  # application ids now being written
+    skipped: list[SkippedJob]
+
+
+class ReviewQueueOut(ApiModel):
+    items: list[ApplicationOut]  # ready to review and send, oldest first
+    writing: int  # drafts still being written

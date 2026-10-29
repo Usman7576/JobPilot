@@ -4,6 +4,7 @@
  * JobPilot AI API
  * OpenAPI spec version: 0.1.0
  */
+import type { ApplicationRef } from './applicationRef';
 import type { EmploymentType } from './employmentType';
 import type { MatchSummary } from './matchSummary';
 import type { PayStatus } from './payStatus';
@@ -35,4 +36,5 @@ export interface JobCard {
   has_contact_email: boolean;
   dismissed: boolean;
   match: MatchSummary | null;
+  application?: ApplicationRef | null;
 }

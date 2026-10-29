@@ -12,7 +12,10 @@ from app.schemas.application import (
     ApplicationOut,
     ApplicationPatch,
     MarkAppliedIn,
+    PrepareBatchIn,
+    PrepareBatchOut,
     RegenerateIn,
+    ReviewQueueOut,
     SendIn,
     SendQuotaOut,
     ToneIn,
@@ -34,6 +37,22 @@ async def get_board(user: CurrentUser, db: DbSession) -> list[BoardCard]:
     """Every application as a board card (the client groups them by `column`)."""
     await tracking_service.sync_follow_up_reminders(db, user)
     return await tracking_service.board_cards(db, user)
+
+
+@router.post("/prepare-batch", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("10/hour")
+async def prepare_batch(
+    request: Request, body: PrepareBatchIn, user: CurrentUser, db: DbSession
+) -> PrepareBatchOut:
+    """Write emails for up to 25 jobs at once. Nothing is sent: each one waits in the
+    review queue for you to approve or skip."""
+    return await application_service.prepare_batch(db, user, body)
+
+
+@router.get("/review-queue")
+async def review_queue(user: CurrentUser, db: DbSession) -> ReviewQueueOut:
+    """Written emails waiting for your review, and how many are still being written."""
+    return await application_service.review_queue(db, user)
 
 
 @router.get("/send-quota")
