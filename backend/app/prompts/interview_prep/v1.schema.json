@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "properties": {
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string" },
+          "why": { "type": "string" },
+          "your_angle": { "type": "string" },
+          "fact_ref": { "type": "string" }
+        },
+        "required": ["question", "why", "your_angle", "fact_ref"]
+      }
+    },
+    "focus_topics": { "type": "array", "items": { "type": "string" } },
+    "to_ask": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["questions", "focus_topics", "to_ask"]
+}

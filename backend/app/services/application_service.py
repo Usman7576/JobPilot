@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError, Conflict, NotFound, ServiceUnavailable
@@ -29,6 +29,7 @@ from app.schemas.application import (
     ApplicationListItem,
     ApplicationOut,
     ApplicationPatch,
+    CompanyApplication,
     DraftOut,
     EventOut,
     FlagOut,
@@ -44,6 +45,8 @@ from app.services import sheets_service
 from app.services.application_events import record_event
 
 log = get_logger(__name__)
+# Drafts that make up the application itself (follow-ups and prep packs come later).
+WRITTEN_KINDS = (DraftKind.EMAIL.value, DraftKind.COVER_LETTER.value, DraftKind.RESUME_TWEAKS.value)
 DONE = (
     ApplicationStatus.APPLIED,
     ApplicationStatus.REPLIED,
@@ -52,6 +55,7 @@ DONE = (
     ApplicationStatus.REJECTED,
 )
 STUCK_AFTER = timedelta(minutes=10)  # a DRAFTING row older than this lost its worker
+COMPANY_WINDOW = timedelta(days=30)  # "you emailed this company recently"
 
 
 class NoResume(AppError):
@@ -118,7 +122,9 @@ async def to_out(db: AsyncSession, app: Application) -> ApplicationOut:
         .order_by(ApplicationEvent.created_at.desc())
         .limit(30)
     )
-    current = [d for d in latest.values() if d is not None]
+    current = [
+        d for k, d in latest.items() if d is not None and k != DraftKind.INTERVIEW_PREP.value
+    ]
     return ApplicationOut(
         id=app.id,
         job_id=app.job_id,
@@ -135,8 +141,9 @@ async def to_out(db: AsyncSession, app: Application) -> ApplicationOut:
         cover_letter=latest["cover_letter"],
         resume_tweaks=latest["resume_tweaks"],
         follow_up=latest["follow_up"],
+        interview_prep=latest["interview_prep"],
         follow_up_count=app.follow_up_count,
-        versions={k: v for k, v in versions.items() if k != DraftKind.FOLLOW_UP.value},
+        versions={k: v for k, v in versions.items() if k in WRITTEN_KINDS},
         flags_blocked=any(d.blocked for d in current),
         flags_acknowledged=app.guardrail_flags_acknowledged_at is not None,
         sent_at=app.sent_at,
@@ -146,6 +153,8 @@ async def to_out(db: AsyncSession, app: Application) -> ApplicationOut:
         notes=app.notes,
         resume_id=app.resume_id,
         resume_file_name=resume.file_name if resume else None,
+        resume_label=resume.label if resume else None,
+        company_history=await company_history(db, app, job) if job else [],
         is_generating=_is_generating(app),
         events=[
             EventOut(
@@ -160,6 +169,30 @@ async def to_out(db: AsyncSession, app: Application) -> ApplicationOut:
         created_at=app.created_at,
         updated_at=app.updated_at,
     )
+
+
+async def company_history(db: AsyncSession, app: Application, job: Job) -> list[CompanyApplication]:
+    """Your other applications sent to the same company in the last 30 days."""
+    same_company = func.lower(Job.company_name) == job.company_name.strip().lower()
+    if job.company_id is not None:
+        same_company = or_(Job.company_id == job.company_id, same_company)
+    rows = await db.execute(
+        select(Application, Job.title)
+        .join(Job, Job.id == Application.job_id)
+        .where(
+            Application.user_id == app.user_id,
+            Application.id != app.id,
+            Application.sent_at >= datetime.now(UTC) - COMPANY_WINDOW,
+            same_company,
+        )
+        .order_by(Application.sent_at.desc())
+        .limit(5)
+    )
+    return [
+        CompanyApplication(id=a.id, job_title=title, status=a.status, sent_at=a.sent_at)
+        for a, title in rows.all()
+        if a.sent_at is not None
+    ]
 
 
 async def get_owned(db: AsyncSession, user: User, application_id: uuid.UUID) -> Application:
@@ -229,6 +262,26 @@ async def _active_resume(db: AsyncSession, user: User) -> Resume:
     return resume
 
 
+async def resume_for_job(db: AsyncSession, user: User, job: Job) -> Resume:
+    """The resume to write from: the closest of your named versions (variants such as
+    "Backend" or "Data"), else your active resume. Unnamed older versions are ignored."""
+    active = await _active_resume(db, user)
+    if job.embedding is None:
+        return active
+    best: Resume | None = await db.scalar(
+        select(Resume)
+        .where(
+            Resume.user_id == user.id,
+            Resume.status == ResumeStatus.PARSED,
+            Resume.embedding.is_not(None),
+            or_(Resume.is_active.is_(True), Resume.label.is_not(None)),
+        )
+        .order_by(Resume.embedding.cosine_distance(job.embedding))
+        .limit(1)
+    )
+    return best or active
+
+
 async def _get_or_create(db: AsyncSession, user: User, job: Job) -> Application:
     app = await for_job(db, user, job.id)
     if app is None:
@@ -291,7 +344,7 @@ async def prepare(
     db: AsyncSession, user: User, job_id: uuid.UUID, body: PrepareIn
 ) -> ApplicationOut:
     job = await _user_job(db, user, job_id)
-    resume = await _active_resume(db, user)
+    resume = await resume_for_job(db, user, job)
     app = await _get_or_create(db, user, job)
     app.resume_id = resume.id
     return await _start_writing(
@@ -318,6 +371,20 @@ async def reverify(db: AsyncSession, user: User, application_id: uuid.UUID) -> N
         verify_application.delay(str(app.id))
     except Exception as exc:
         raise ServiceUnavailable("Couldn't start the fact-check. Try again.") from exc
+
+
+async def request_interview_prep(db: AsyncSession, user: User, application_id: uuid.UUID) -> None:
+    """Write an interview prep pack in the background (poll the application for it)."""
+    from app.tasks.application_tasks import write_interview_prep
+
+    app = await get_owned(db, user, application_id)
+    if app.resume_id is None:
+        app.resume_id = (await _active_resume(db, user)).id
+        await db.commit()
+    try:
+        write_interview_prep.delay(str(app.id))
+    except Exception as exc:
+        raise ServiceUnavailable("Couldn't start writing. Try again in a moment.") from exc
 
 
 # --- editing ---------------------------------------------------------------------------------
@@ -494,7 +561,7 @@ async def prepare_batch(db: AsyncSession, user: User, body: PrepareBatchIn) -> P
     Nothing is sent: each draft lands in the review queue, where the user approves or skips
     it one by one. Jobs already applied to, being written, or without an email are skipped.
     """
-    resume = await _active_resume(db, user)
+    await _active_resume(db, user)  # fail early, before touching any job
     started: list[uuid.UUID] = []
     skipped: list[SkippedJob] = []
     for job_id in dict.fromkeys(body.job_ids):
@@ -514,7 +581,7 @@ async def prepare_batch(db: AsyncSession, user: User, body: PrepareBatchIn) -> P
             skipped.append(SkippedJob(job_id=job_id, reason="Already written: it's in the queue"))
             await db.commit()
             continue
-        app.resume_id = resume.id
+        app.resume_id = (await resume_for_job(db, user, job)).id
         try:
             await _start_writing(db, app, [DraftKind.EMAIL.value], body.tone, None)
         except AppError as exc:

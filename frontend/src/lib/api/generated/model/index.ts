@@ -5,6 +5,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './answerItem';
+export * from './answersIn';
+export * from './answersOut';
 export * from './applicationChannel';
 export * from './applicationListItem';
 export * from './applicationOut';
@@ -18,6 +21,7 @@ export * from './boardCard';
 export * from './boardCardColumn';
 export * from './bodyResumesUploadResume';
 export * from './certification';
+export * from './companyApplication';
 export * from './connectOut';
 export * from './contact';
 export * from './contactSource';

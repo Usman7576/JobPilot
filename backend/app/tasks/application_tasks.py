@@ -31,3 +31,10 @@ def write_follow_up(application_id: str, tone: str) -> bool:
     """A follow-up email draft for an application that hasn't had a reply."""
     with sync_session() as session:
         return application_writer.write_follow_up(session, uuid.UUID(application_id), Tone(tone))
+
+
+@celery_app.task(soft_time_limit=4 * 60)
+def write_interview_prep(application_id: str) -> bool:
+    """Likely interview questions, topics to revise and questions to ask, for one application."""
+    with sync_session() as session:
+        return application_writer.write_interview_prep(session, uuid.UUID(application_id))

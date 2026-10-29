@@ -547,6 +547,67 @@
         }
       }
     },
+    "/api/v1/users/me/answers": {
+      "get": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Get Answers",
+        "description": "Your saved answers to common application-form questions (stored encrypted).",
+        "operationId": "users_get_answers",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswersOut"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "users"
+        ],
+        "summary": "Save Answers",
+        "operationId": "users_save_answers",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswersIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnswersOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/users/me/export": {
       "get": {
         "tags": [
@@ -2562,6 +2623,48 @@
         }
       }
     },
+    "/api/v1/applications/{application_id}/interview-prep": {
+      "post": {
+        "tags": [
+          "applications"
+        ],
+        "summary": "Interview Prep",
+        "description": "Write an interview prep pack for this job (poll the application for `interview_prep`).",
+        "operationId": "applications_interview_prep",
+        "parameters": [
+          {
+            "name": "application_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Application Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/integrations": {
       "get": {
         "tags": [
@@ -2960,6 +3063,63 @@
   },
   "components": {
     "schemas": {
+      "AnswerItem": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Question"
+          },
+          "answer": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Answer"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "question",
+          "answer"
+        ],
+        "title": "AnswerItem"
+      },
+      "AnswersIn": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerItem"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "AnswersIn"
+      },
+      "AnswersOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "AnswersOut"
+      },
       "ApplicationChannel": {
         "type": "string",
         "enum": [
@@ -3155,6 +3315,16 @@
               }
             ]
           },
+          "interview_prep": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "follow_up_count": {
             "type": "integer",
             "title": "Follow Up Count"
@@ -3257,6 +3427,25 @@
               }
             ],
             "title": "Resume File Name"
+          },
+          "resume_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resume Label"
+          },
+          "company_history": {
+            "items": {
+              "$ref": "#/components/schemas/CompanyApplication"
+            },
+            "type": "array",
+            "title": "Company History",
+            "default": []
           },
           "is_generating": {
             "type": "boolean",
@@ -3640,6 +3829,37 @@
         ],
         "title": "Certification"
       },
+      "CompanyApplication": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "job_title": {
+            "type": "string",
+            "title": "Job Title"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApplicationStatus"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "job_title",
+          "status",
+          "sent_at"
+        ],
+        "title": "CompanyApplication",
+        "description": "Another application of yours to the same company (to avoid emailing them twice)."
+      },
       "ConnectOut": {
         "properties": {
           "url": {
@@ -3798,7 +4018,8 @@
           "email",
           "cover_letter",
           "resume_tweaks",
-          "follow_up"
+          "follow_up",
+          "interview_prep"
         ],
         "title": "DraftKind"
       },

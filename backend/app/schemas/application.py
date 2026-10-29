@@ -126,6 +126,15 @@ class EventOut(ApiModel):
     created_at: datetime
 
 
+class CompanyApplication(ApiModel):
+    """Another application of yours to the same company (to avoid emailing them twice)."""
+
+    id: uuid.UUID
+    job_title: str
+    status: ApplicationStatus
+    sent_at: datetime
+
+
 class ApplicationOut(ApiModel):
     id: uuid.UUID
     job_id: uuid.UUID
@@ -142,6 +151,7 @@ class ApplicationOut(ApiModel):
     cover_letter: DraftOut | None
     resume_tweaks: DraftOut | None
     follow_up: DraftOut | None
+    interview_prep: DraftOut | None = None
     follow_up_count: int
     versions: dict[str, list[DraftOut]]  # all drafts per kind, newest first
     flags_blocked: bool  # some draft has a "block" flag
@@ -153,6 +163,9 @@ class ApplicationOut(ApiModel):
     notes: str | None
     resume_id: uuid.UUID | None
     resume_file_name: str | None
+    resume_label: str | None = None  # the named version it was written from
+    # Applications to the same company in the last 30 days, newest first.
+    company_history: list[CompanyApplication] = []
     is_generating: bool
     events: list[EventOut]
     created_at: datetime
@@ -214,3 +227,20 @@ class PrepareBatchOut(ApiModel):
 class ReviewQueueOut(ApiModel):
     items: list[ApplicationOut]  # ready to review and send, oldest first
     writing: int  # drafts still being written
+
+
+class LLMPrepQuestion(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    question: str = Field(max_length=400)
+    why: str = Field(default="", max_length=400)
+    your_angle: str = Field(default="", max_length=800)
+    fact_ref: str = ""
+
+
+class LLMInterviewPrep(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    questions: list[LLMPrepQuestion] = Field(min_length=1)
+    focus_topics: list[str] = Field(default_factory=list)
+    to_ask: list[str] = Field(default_factory=list)

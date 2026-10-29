@@ -13,4 +13,5 @@ export const DraftKind = {
   cover_letter: 'cover_letter',
   resume_tweaks: 'resume_tweaks',
   follow_up: 'follow_up',
+  interview_prep: 'interview_prep',
 } as const;

@@ -32,7 +32,7 @@ from app.models.enums import (
 )
 from app.prompts.registry import load_prompt, render
 from app.providers.llm import LLMError
-from app.schemas.application import LLMClaims, LLMTweaks, LLMWritten
+from app.schemas.application import LLMClaims, LLMInterviewPrep, LLMTweaks, LLMWritten
 from app.schemas.profile import ResumeProfile
 from app.services import contact_service, llm_gateway
 from app.services.application_events import record_event
@@ -421,6 +421,60 @@ def write_follow_up(
             return False
         application.last_error = (
             str(exc) if isinstance(exc, LookupError) else "The AI couldn't write the follow-up."
+        )
+    session.commit()
+    return application.last_error is None
+
+
+def write_interview_prep(session: Session, application_id: uuid.UUID) -> bool:
+    """Likely questions with the candidate's angle from the fact sheet, topics to revise and
+    questions to ask. Stored as a draft; it never changes the application's status."""
+    application = session.get(Application, application_id)
+    if application is None:
+        return False
+    try:
+        ctx = load_context(session, application)
+        prompt = render(
+            load_prompt("interview_prep", 1),
+            fact_sheet=ctx.facts.as_prompt(),
+            job_title=ctx.job.title,
+            company=ctx.job.company_name,
+            location=ctx.job.location_raw or "",
+            job_description=ctx.job_text,
+        )
+        prep, result = llm_gateway.generate(
+            session,
+            user_id=ctx.user.id,
+            feature=UsageFeature.GENERATE,
+            prompt=prompt,
+            parse=LLMInterviewPrep.model_validate,
+            ref_type="application",
+            ref_id=application.id,
+        )
+        content: dict[str, Any] = {
+            "questions": [
+                {
+                    "question": q.question.strip(),
+                    "why": q.why.strip(),
+                    "your_angle": guardrails.strip_fact_ids(q.your_angle.strip()),
+                }
+                for q in prep.questions[:12]
+            ],
+            "focus_topics": [t.strip() for t in prep.focus_topics[:8] if t.strip()],
+            "to_ask": [t.strip() for t in prep.to_ask[:8] if t.strip()],
+        }
+        _save_draft(
+            session, application, DraftKind.INTERVIEW_PREP, application.tone, content,
+            Report(verified=True), "interview_prep", result.model,
+        )  # fmt: skip
+        application.last_error = None
+    except (LookupError, LLMError) as exc:
+        session.rollback()
+        application = session.get(Application, application_id)
+        if application is None:
+            return False
+        application.last_error = (
+            str(exc) if isinstance(exc, LookupError) else "The AI couldn't write the prep pack."
         )
     session.commit()
     return application.last_error is None

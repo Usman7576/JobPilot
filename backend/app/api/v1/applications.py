@@ -179,3 +179,12 @@ async def cancel_send(
 ) -> ApplicationOut:
     """Stop a scheduled email before it goes (it returns to Ready)."""
     return await send_service.cancel(db, user, application_id)
+
+
+@router.post("/{application_id}/interview-prep", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("10/hour")
+async def interview_prep(
+    request: Request, application_id: uuid.UUID, user: CurrentUser, db: DbSession
+) -> None:
+    """Write an interview prep pack for this job (poll the application for `interview_prep`)."""
+    await application_service.request_interview_prep(db, user, application_id)

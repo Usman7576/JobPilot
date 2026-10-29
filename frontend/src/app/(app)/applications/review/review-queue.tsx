@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { CompanyHistoryNote } from "@/components/applications/extras";
 import { emailSubject, emailText } from "@/components/applications/send-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -271,6 +272,8 @@ function ReviewCard({
             )}
           </dd>
         </dl>
+
+        <CompanyHistoryNote app={app} />
 
         <div className="bg-muted max-h-[50vh] overflow-y-auto rounded-md p-4 text-sm leading-relaxed whitespace-pre-wrap">
           {emailText(app)}

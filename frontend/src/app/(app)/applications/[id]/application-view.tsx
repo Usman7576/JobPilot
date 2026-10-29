@@ -20,6 +20,11 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { DraftEditor } from "@/components/applications/draft-editor";
+import {
+  CompanyHistoryNote,
+  InterviewPrepCard,
+  SiteAnswers,
+} from "@/components/applications/extras";
 import { emailSubject, emailText, SendDialog } from "@/components/applications/send-dialog";
 import { EmptyState } from "@/components/common/empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -210,6 +215,12 @@ export function ApplicationView() {
           <p className="text-muted-foreground flex items-center gap-1 text-sm">
             <Building2 className="size-4" /> {data.company_name}
           </p>
+          {data.resume_label && (
+            <p className="text-muted-foreground text-xs">
+              Written from your &ldquo;{data.resume_label}&rdquo; resume, the closest of your named
+              versions to this job.
+            </p>
+          )}
         </div>
         <Badge variant={applied ? "default" : "secondary"}>
           {STATUS_LABEL[data.status] ?? data.status}
@@ -387,6 +398,7 @@ export function ApplicationView() {
               )}
             </div>
           )}
+          {applied && <InterviewPrepCard app={data} />}
         </section>
 
         <aside className="grid content-start gap-4">
@@ -435,6 +447,7 @@ export function ApplicationView() {
                 />
               ) : (
                 <>
+                  <CompanyHistoryNote app={data} />
                   {data.email && data.contact_email && canSend && (
                     <SendDialog
                       app={data}
@@ -519,6 +532,7 @@ export function ApplicationView() {
                   </li>
                   <li>Submit the form yourself, then come back here.</li>
                 </ol>
+                <SiteAnswers />
                 <Button onClick={() => apply("site")} disabled={markApplied.isPending}>
                   I applied on the site
                 </Button>

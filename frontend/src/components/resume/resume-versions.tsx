@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { Download, MoreHorizontal, RefreshCw, Star, Trash2 } from "lucide-react";
+import { Download, MoreHorizontal, PencilLine, RefreshCw, Star, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -24,6 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ResumeStatus, ResumeSummary } from "@/lib/api/generated/model";
 import {
@@ -33,6 +34,7 @@ import {
   useResumesDeleteResume,
   useResumesListResumes,
   useResumesReparseResume,
+  useResumesUpdateLabel,
 } from "@/lib/api/generated/resumes/resumes";
 import { errorMessage } from "@/lib/forms";
 
@@ -60,6 +62,9 @@ export function ResumeVersions() {
   const reparse = useResumesReparseResume();
   const remove = useResumesDeleteResume();
   const [toDelete, setToDelete] = useState<ResumeSummary | null>(null);
+  const rename = useResumesUpdateLabel();
+  const [toName, setToName] = useState<ResumeSummary | null>(null);
+  const [name, setName] = useState("");
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: getResumesListResumesQueryKey() });
@@ -74,6 +79,11 @@ export function ResumeVersions() {
 
   return (
     <>
+      <p className="text-muted-foreground mb-2 text-sm">
+        Tailored resumes? Upload each one and give it a name (like &ldquo;Backend&rdquo; or
+        &ldquo;Data&rdquo;). Applications are then written from whichever named version is closest
+        to the job; unnamed old versions are never used.
+      </p>
       <ul className="divide-y rounded-xl border">
         {list.data.map((r) => {
           const badge = STATUS_BADGE[r.status];
@@ -121,6 +131,14 @@ export function ResumeVersions() {
                       <Star className="size-4" /> Make active
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setName(r.label ?? "");
+                      setToName(r);
+                    }}
+                  >
+                    <PencilLine className="size-4" /> {r.label ? "Rename" : "Name this version"}
+                  </DropdownMenuItem>
                   {(r.status === "failed" || r.status === "parsed") && (
                     <DropdownMenuItem
                       onSelect={() =>
@@ -146,6 +164,46 @@ export function ResumeVersions() {
           );
         })}
       </ul>
+
+      <AlertDialog open={toName !== null} onOpenChange={(open) => !open && setToName(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Name version {toName?.version}</AlertDialogTitle>
+            <AlertDialogDescription>
+              A short name such as &ldquo;Backend&rdquo; or &ldquo;Internships&rdquo;. Named
+              versions can be picked automatically for jobs they suit. Leave empty to remove the
+              name.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            aria-label="Version name"
+            value={name}
+            maxLength={80}
+            placeholder="e.g. Backend"
+            onChange={(e) => setName(e.target.value)}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                toName &&
+                rename.mutate(
+                  { resumeId: toName.id, data: { label: name.trim() || null } },
+                  {
+                    onSuccess: () => {
+                      refresh();
+                      toast.success(name.trim() ? `Named “${name.trim()}”` : "Name removed");
+                    },
+                    onError,
+                  },
+                )
+              }
+            >
+              Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={toDelete !== null} onOpenChange={(open) => !open && setToDelete(null)}>
         <AlertDialogContent>

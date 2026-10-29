@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request, Response, status
 from app.core.cookies import clear_session_cookies
 from app.core.deps import CurrentUser, DbSession
 from app.core.ratelimit import limiter
+from app.schemas.answers import AnswerItem, AnswersIn, AnswersOut
 from app.schemas.auth import DeleteAccountIn, UserOut, UserUpdate
 from app.services import account_service, user_service
 
@@ -22,6 +23,19 @@ async def get_me(user: CurrentUser) -> UserOut:
 async def update_me(body: UserUpdate, user: CurrentUser, db: DbSession) -> UserOut:
     updated = await user_service.update_user(db, user, body)
     return user_service.to_user_out(updated)
+
+
+@router.get("/me/answers")
+async def get_answers(user: CurrentUser) -> AnswersOut:
+    """Your saved answers to common application-form questions (stored encrypted)."""
+    return AnswersOut(items=[AnswerItem.model_validate(a) for a in user.answer_bank or []])
+
+
+@router.put("/me/answers")
+async def save_answers(body: AnswersIn, user: CurrentUser, db: DbSession) -> AnswersOut:
+    user.answer_bank = [item.model_dump() for item in body.items]
+    await db.commit()
+    return AnswersOut(items=body.items)
 
 
 @router.get(

@@ -179,6 +179,7 @@ class DraftKind(StrEnum):
     COVER_LETTER = "cover_letter"
     RESUME_TWEAKS = "resume_tweaks"
     FOLLOW_UP = "follow_up"
+    INTERVIEW_PREP = "interview_prep"
 
 
 class EventActor(StrEnum):

@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { CompanyHistoryNote } from "@/components/applications/extras";
 import { Button } from "@/components/ui/button";
 import {
   applicationsSendApplication,
@@ -126,6 +127,7 @@ export function SendDialog({
             )}
           </dd>
         </dl>
+        <CompanyHistoryNote app={app} />
         <div className="bg-muted max-h-72 overflow-y-auto rounded-md p-3 text-sm whitespace-pre-wrap">
           {emailText(app)}
         </div>

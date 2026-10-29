@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { PageHeader } from "@/components/common/page-header";
 import { PreferencesForm } from "@/components/preferences/preferences-form";
+import { AnswerBankCard } from "@/components/settings/answer-bank-card";
 import { DangerZone } from "@/components/settings/danger-zone";
 import { GmailCard } from "@/components/settings/gmail-card";
 import { ScheduleCard } from "@/components/settings/schedule-card";
@@ -48,6 +49,10 @@ export default function SettingsPage() {
             </p>
           </div>
           <PreferencesForm />
+        </section>
+        <section className="grid gap-4">
+          <h2 className="text-lg font-semibold">Application forms</h2>
+          <AnswerBankCard />
         </section>
         <section className="grid gap-4">
           <h2 className="text-lg font-semibold">AI usage</h2>

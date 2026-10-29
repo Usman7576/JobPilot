@@ -18,6 +18,7 @@ from sqlalchemy.dialects.postgresql import CITEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base, Timestamps, UUIDPk
+from app.db.types import EncryptedJSON
 from app.models.enums import OAuthProvider, OnboardingStep, pg_enum
 
 
@@ -32,6 +33,8 @@ class User(UUIDPk, Timestamps, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     daily_send_cap: Mapped[int] = mapped_column(Integer, default=25, server_default="25")
     follow_up_days: Mapped[int] = mapped_column(Integer, default=7, server_default="7")
+    # Saved answers to common application-form questions: [{question, answer}].
+    answer_bank: Mapped[list[dict[str, str]] | None] = mapped_column(EncryptedJSON)
     monthly_ai_budget_usd: Mapped[Decimal] = mapped_column(
         Numeric(10, 4), default=Decimal(0), server_default="0"
     )

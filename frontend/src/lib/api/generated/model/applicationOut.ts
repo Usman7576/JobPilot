@@ -7,6 +7,7 @@
 import type { ApplicationChannel } from './applicationChannel';
 import type { ApplicationOutVersions } from './applicationOutVersions';
 import type { ApplicationStatus } from './applicationStatus';
+import type { CompanyApplication } from './companyApplication';
 import type { ContactSource } from './contactSource';
 import type { DraftOut } from './draftOut';
 import type { EventOut } from './eventOut';
@@ -28,6 +29,7 @@ export interface ApplicationOut {
   cover_letter: DraftOut | null;
   resume_tweaks: DraftOut | null;
   follow_up: DraftOut | null;
+  interview_prep?: DraftOut | null;
   follow_up_count: number;
   versions: ApplicationOutVersions;
   flags_blocked: boolean;
@@ -39,6 +41,8 @@ export interface ApplicationOut {
   notes: string | null;
   resume_id: string | null;
   resume_file_name: string | null;
+  resume_label?: string | null;
+  company_history?: CompanyApplication[];
   is_generating: boolean;
   events: EventOut[];
   created_at: string;

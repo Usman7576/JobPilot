@@ -1649,3 +1649,77 @@ export const useApplicationsCancelSend = <TError = ErrorType<HTTPValidationError
       > => {
       return useMutation(getApplicationsCancelSendMutationOptions(options), queryClient);
     }
+    export const getApplicationsInterviewPrepUrl = (applicationId: string,) => {
+
+
+
+
+  return `/api/v1/applications/${applicationId}/interview-prep`
+}
+
+/**
+ * Write an interview prep pack for this job (poll the application for `interview_prep`).
+ * @summary Interview Prep
+ */
+export const applicationsInterviewPrep = async (applicationId: string, options?: Parameters<typeof customFetch>[1]): Promise<unknown> => {
+
+  return customFetch<unknown>(getApplicationsInterviewPrepUrl(applicationId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getApplicationsInterviewPrepMutationKey = () => ['applicationsInterviewPrep'] as const;
+
+export const getApplicationsInterviewPrepMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsInterviewPrep>>, TError,ApplicationsInterviewPrepMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applicationsInterviewPrep>>, TError,ApplicationsInterviewPrepMutationVariables, TContext> => {
+
+const mutationKey = getApplicationsInterviewPrepMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applicationsInterviewPrep>>, ApplicationsInterviewPrepMutationVariables> = (props) => {
+          const {applicationId} = props ?? {};
+
+          return  applicationsInterviewPrep(applicationId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplicationsInterviewPrepMutationResult = NonNullable<Awaited<ReturnType<typeof applicationsInterviewPrep>>>
+
+    export type ApplicationsInterviewPrepMutationError = ErrorType<HTTPValidationError>
+    export type ApplicationsInterviewPrepMutationVariables = {applicationId: string}
+
+    /**
+ * @summary Interview Prep
+ */
+export const useApplicationsInterviewPrep = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applicationsInterviewPrep>>, TError,ApplicationsInterviewPrepMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof applicationsInterviewPrep>>,
+        TError,
+        ApplicationsInterviewPrepMutationVariables,
+        TContext
+      > => {
+      return useMutation(getApplicationsInterviewPrepMutationOptions(options), queryClient);
+    }
