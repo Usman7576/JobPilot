@@ -99,8 +99,11 @@ async def test_refresh_rotation_and_reuse_detection(
 
     # Replaying the rotated-out token revokes the whole family.
     client.cookies.set("refresh_token", first_refresh, path="/api/v1/auth")
+    assert client.cookies.get("jp_session")
     r = await client.post("/api/v1/auth/refresh", headers=csrf_headers(client))
-    assert r.status_code == 401
+    assert r.status_code == 401 and r.json()["code"] == "unauthorized"
+    # The dead session's cookies are dropped, so the homepage stops forwarding to the app.
+    assert client.cookies.get("jp_session") is None
 
     active = await db.scalars(select(RefreshToken).where(RefreshToken.revoked_at.is_(None)))
     assert list(active) == []

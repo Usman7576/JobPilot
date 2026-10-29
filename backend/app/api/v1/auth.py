@@ -3,13 +3,13 @@ from __future__ import annotations
 import secrets
 
 from fastapi import APIRouter, Request, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.core import security
 from app.core.config import get_settings
 from app.core.cookies import clear_session_cookies, set_session_cookies
 from app.core.deps import Client, DbSession, MailerDep
-from app.core.errors import AppError, Unauthorized
+from app.core.errors import AppError, Unauthorized, problem
 from app.core.logging import get_logger
 from app.core.ratelimit import limiter
 from app.integrations import google_oauth
@@ -81,19 +81,23 @@ async def login(
     return to_user_out(user)
 
 
-@router.post("/refresh")
+@router.post("/refresh", response_model=MessageOut)
 @limiter.limit("60/minute")
 async def refresh(
     request: Request, response: Response, db: DbSession, client: Client
-) -> MessageOut:
+) -> MessageOut | JSONResponse:
     token = request.cookies.get(security.REFRESH_COOKIE)
-    if not token:
-        raise Unauthorized()
     try:
+        if not token:
+            raise Unauthorized()
         tokens = await auth_service.rotate_refresh(db, token, client)
-    except Unauthorized:
-        clear_session_cookies(response)
-        raise
+    except Unauthorized as exc:
+        # The session is over: answer 401 *and* drop the cookies, including the
+        # "signed in" hint, or the homepage would keep forwarding to the app and on to login.
+        # (Cookies set on `response` are lost when an exception is raised, so build it here.)
+        failed = problem(exc.status_code, exc.code, exc.title, exc.detail)
+        clear_session_cookies(failed)
+        return failed
     set_session_cookies(response, tokens)
     return MessageOut(message="refreshed")
 
